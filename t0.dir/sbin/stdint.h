@@ -19,11 +19,8 @@ typedef long reg_t;
 typedef unsigned int size_t;
 typedef int ssize_t;
 
-typedef unsigned int off_t;
+typedef int32_t off_t;
 
 typedef unsigned long long uint64_t;
-
-typedef long long int64_t;
-
 
 #endif

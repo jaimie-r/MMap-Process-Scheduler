@@ -7,6 +7,9 @@
 #include "shared.h"
 #include "threads.h"
 #include "vmm.h"
+#include "process.h"
+
+
 
 namespace gheith {
     Atomic<uint32_t> TCB::next_id{0};
@@ -26,7 +29,7 @@ namespace gheith {
 
     void entry() {
         auto me = current();
-        vmm_on((uint32_t)me->pd);
+        vmm_on((uint32_t)me->process->pd);
         sti();
         me->doYourThing();
         stop();
@@ -47,21 +50,39 @@ namespace gheith {
     }
 
     struct IdleTcb: public TCB {
-        IdleTcb(): TCB(true) {}
+        IdleTcb(): TCB(Process::kernelProcess,true) {}
         void doYourThing() override {
             Debug::panic("should not call this");
         }
+        uint32_t interruptEsp() override {
+            // idle threads never enter user mode, this should be ok
+            return 0;
+        }
     };
 
-    TCB::TCB(bool isIdle) : isIdle(isIdle), id(next_id.fetch_add(1)) {
+    TCB::TCB(Shared<Process> process, bool isIdle) :
+        isIdle(isIdle), id(next_id.fetch_add(1)), process{process}
+    {
         saveArea.tcb = this;
-        pd = (uint32_t*) PhysMem::alloc_frame();
-        memcpy(pd, global_pd, PhysMem::FRAME_SIZE);
-        saveArea.cr3 = (uint32_t) pd;
-        entry_list = nullptr;
+        saveArea.cr3 = (uint32_t) process->pd;
     }
 
     TCB::~TCB() {
+    }
+
+    // TCBWithStack
+    TCBWithStack::TCBWithStack(Shared<Process> process) : TCB(process,false) {
+        stack[STACK_WORDS - 2] = 0x200;  // EFLAGS: IF
+        stack[STACK_WORDS - 1] = (uint32_t) entry;
+	    saveArea.no_preempt = 0;
+        saveArea.esp = (uint32_t) &stack[STACK_WORDS-2];
+    }
+
+    TCBWithStack::~TCBWithStack() {
+        if (stack) {
+            delete[] stack;
+            stack = nullptr;
+        }
     }
 };
 
@@ -77,7 +98,7 @@ void threadsInit() {
     }
 
     // The reaper
-    thread([] {
+    thread(Process::kernelProcess,[] {
         //Debug::printf("| starting reaper\n");
         while (true) {
             ASSERT(!Interrupts::isDisabled());

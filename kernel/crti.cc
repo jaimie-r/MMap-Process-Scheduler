@@ -1,4 +1,3 @@
-/* Adam Schoenberg contributed code to run global constructors */
 
 #include "crt.h"
 
@@ -25,5 +24,11 @@ void CRT::fini(void)
 
 func_ptr _init_array_start[0] __attribute__ ((used, section(".init_array"), aligned(sizeof(func_ptr)))) = { };
 func_ptr _fini_array_start[0] __attribute__ ((used, section(".fini_array"), aligned(sizeof(func_ptr)))) = { };
+
+extern "C" int __cxa_atexit(void (*func) (void *), void * arg, void * dso_handle) {
+    return 0;
+}
+
+
 
 

@@ -82,6 +82,39 @@ getFlags:
     pop %eax
     ret
 
+	/* memcpy(void* dest, void* src, size_t n) */
+        .global memcpy
+memcpy:
+        mov 4(%esp),%eax       # dest
+        mov 8(%esp),%edx       # src
+        mov 12(%esp),%ecx      # n
+        push %ebx
+1:
+        add $-1,%ecx
+        jl 1f
+        movb (%edx),%bl
+        movb %bl,(%eax)
+        add $1,%edx
+        add $1,%eax
+        jmp 1b
+1:
+        pop %ebx
+        ret
+
+     /* bzero(void* dest, size_t n) */
+    .global bzero
+bzero:
+    mov 4(%esp),%eax       # dest
+    mov 8(%esp),%ecx      # n
+1:
+    add $-1,%ecx
+    jl 1f
+    movb $0,(%eax)
+    add $1,%eax
+    jmp 1b
+1:
+    ret
+
 	# ltr(uint32_t tr)
 	.global ltr
 ltr:
@@ -166,5 +199,29 @@ vmm_on:
 getCR3:
     mov %cr3,%eax
     ret
+
+	# switchToUser(pc,esp,eax)
+        .global switchToUser
+switchToUser:
+        mov 4(%esp),%ecx        # pc
+        mov 8(%esp),%ebx        # esp
+        mov 12(%esp),%eax       # eax
+        pushl userSS            # user SS
+        pushl %ebx              # user ESP
+        pushf                   # ring 3 flags
+        orl $0x200,(%esp)       # enable interrupts
+        pushl userCS            # user CS
+        pushl %ecx              # user EIP
+        iret
+
+
+	.global sysHandler_
+sysHandler_:
+        push %esp
+        push %eax
+        .extern sysHandler
+        call sysHandler
+        add $8,%esp
+        iret
 
 

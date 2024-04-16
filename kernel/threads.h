@@ -7,7 +7,10 @@
 #include "debug.h"
 #include "smp.h"
 #include "shared.h"
-#include "ext2.h"
+#include "vmm.h"
+#include "tss.h"
+
+class Process;
 
 namespace gheith {
 
@@ -28,17 +31,6 @@ namespace gheith {
         uint32_t cr3;                        /* 32 */
     };
 
-    struct VMEntry {
-        VMEntry(Shared<Node> file, uint32_t size, uint32_t starting_address, uint32_t offset, VMEntry* next) :
-                file(file), size(size), starting_address(starting_address), offset(offset), next(next) {};
-
-        Shared<Node> file;
-        uint32_t size;
-        uint32_t starting_address;
-        uint32_t offset;
-        VMEntry* next;
-    };
-
     struct TCB {
         static Atomic<uint32_t> next_id;
 
@@ -50,14 +42,14 @@ namespace gheith {
 
         SaveArea saveArea;
 
-        VMEntry* entry_list;
-        uint32_t* pd;
+        Shared<Process> process;
 
-        TCB(bool isIdle);
+        TCB(Shared<Process> process, bool isIdle);
 
         virtual ~TCB();
 
         virtual void doYourThing() = 0;
+        virtual uint32_t interruptEsp() = 0;
     };
 
     extern "C" void gheith_contextSwitch(gheith::SaveArea *, gheith::SaveArea *, void* action, void* arg);
@@ -123,24 +115,19 @@ namespace gheith {
 
         activeThreads[core_id] = next_tcb;  // Why is this safe?
 
+        tss[core_id].esp0 = next_tcb->interruptEsp();
         gheith_contextSwitch(&me->saveArea,&next_tcb->saveArea,(void *)caller<F>,(void*)&f);
     }
 
     struct TCBWithStack : public TCB {
         uint32_t *stack = new uint32_t[STACK_WORDS];
     
-        TCBWithStack() : TCB(false) {
-            stack[STACK_WORDS - 2] = 0x200;  // EFLAGS: IF
-            stack[STACK_WORDS - 1] = (uint32_t) entry;
-	        saveArea.no_preempt = 0;
-            saveArea.esp = (uint32_t) &stack[STACK_WORDS-2];
-        }
+        TCBWithStack(Shared<Process> process);
 
-        ~TCBWithStack() {
-            if (stack) {
-                delete[] stack;
-                stack = nullptr;
-            }
+        ~TCBWithStack();
+
+        uint32_t interruptEsp() override {
+            return (uint32_t) &stack[2047];
         }
     };
     
@@ -149,7 +136,7 @@ namespace gheith {
     struct TCBImpl : public TCBWithStack {
         T work;
 
-        TCBImpl(T work) : TCBWithStack(), work(work) {
+        TCBImpl(Shared<Process> process, T work) : TCBWithStack(process), work(work) {
         }
 
         ~TCBImpl() {
@@ -170,12 +157,12 @@ extern void yield();
 
 
 template <typename T>
-void thread(T work) {
+void thread(Shared<Process> process, T work) {
     using namespace gheith;
 
     delete_zombies();
 
-    auto tcb = new TCBImpl<T>(work);
+    auto tcb = new TCBImpl<T>(process,work);
     schedule(tcb);
 
 }

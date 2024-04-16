@@ -1,9 +1,6 @@
 B = build
 
-TESTS_DIR ?= ..
-
-TESTS = ${sort ${subst .cc,,${notdir ${wildcard ${TESTS_DIR}/*.cc}}}}
-IMAGES = ${addprefix $B/,${addsuffix .img,${TESTS}}}
+IMAGES = $B/kernel.img
 
 all : ${IMAGES}
 
@@ -19,7 +16,11 @@ SFILES = $(wildcard *.S) $(wildcard *.s)
 ALL_OFILES = $(subst .cc,.o,$(CCFILES)) $(subst .c,.o,$(CFILES)) $(subst .s,.o,$(subst .S,.o,$(SFILES)))
 KERNEL_OFILES = ${filter-out crtn.o, ${filter-out crti.o, ${ALL_OFILES}}}
 
-OFILES = ${addprefix $B/,crti.o} ${shell gcc -m32 --print-file-name crtbegin.o} ${addprefix $B/,${KERNEL_OFILES}} ${shell gcc -m32 --print-file-name crtend.o} ${addprefix $B/,crtn.o}
+OFILES = ${addprefix $B/,crti.o} \
+         ${shell gcc -m32 --print-file-name crtbegin.o} \
+         ${addprefix $B/,${KERNEL_OFILES}} \
+         ${shell gcc -m32 --print-file-name crtend.o} \
+         ${addprefix $B/,crtn.o}
 
 # keep all files
 .SECONDARY :
@@ -33,11 +34,6 @@ $B/%.o :  Makefile %.cc
 	@echo "compiling  $*.cc"
 	@mkdir -p build
 	g++ -I. -c -MD $ -MF $B/$*.d -o $B/$*.o $(CCFLAGS) $*.cc
-
-$B/%.o :  Makefile ${TESTS_DIR}/%.cc
-	@echo "compiling  ${TESTS_DIR}/$*.cc"
-	@mkdir -p build
-	g++ -I. -c -MD $ -MF $B/$*.d -o $B/$*.o $(CCFLAGS) ${TESTS_DIR}/$*.cc
 
 $B/%.o :  Makefile %.S
 	@echo "assembling $*.S"
@@ -65,8 +61,8 @@ clean ::
 
 -include $B/*.d
 
-$B/%.kernel : script.ld Makefile $B/%.o $(OFILES)
+$B/%.kernel : script.ld Makefile $(OFILES)
 	@echo "linking    $*.kernel"
 	@mkdir -p build
-	ld -T script.ld -N -m elf_i386 -e start -o $@ $B/$*.o $(OFILES)
+	ld -T script.ld -N -m elf_i386 -e start -o $@ $(OFILES)
 

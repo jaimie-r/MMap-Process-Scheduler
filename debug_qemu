@@ -1,6 +1,6 @@
 set -e
 
-UTCS_OPT=-O0 make clean $1 $1.data
+UTCS_OPT=-O0 make clean the_kernel $1.data
 
 echo "in a different window:"
 echo "   gdb kernel/build/$1.kernel"
@@ -13,6 +13,6 @@ time `make qemu_cmd` `make qemu_config_flags` \
              -no-reboot \
              -nographic \
              --monitor none \
-             -drive file=kernel/build/$1.img,index=0,media=disk,format=raw \
+             -drive file=kernel/build/kernel.img,index=0,media=disk,format=raw \
              -drive file=$1.data,index=1,media=disk,format=raw \
              -device isa-debug-exit,iobase=0xf4,iosize=0x04 || true

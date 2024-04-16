@@ -39,9 +39,19 @@ struct cpuid_out {
 
 extern "C" void cpuid(uint32_t eax, cpuid_out* out);
 
-extern bool disable();
-extern void enable(bool wasDisabled);
+//extern bool disable();
+//extern void enable(bool wasDisabled);
 
 extern void pause();
+
+extern "C" void switchToUser(uint32_t pc, uint32_t esp, uint32_t eax);
+
+extern "C" void ltr(uint32_t);
+
+extern uint32_t tssDescriptorBase;
+extern uint32_t kernelSS;
+
+extern "C" void sysHandler_(void);
+
 
 #endif

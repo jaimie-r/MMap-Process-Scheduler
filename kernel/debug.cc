@@ -32,15 +32,11 @@ void Debug::printf(const char* fmt, ...) {
     va_end(ap);
 }
 
-static Atomic<bool> showed_checks { false };
-
 void Debug::shutdown() {
-    if (!showed_checks.exchange(true)) {
-        if (checks.get() > 0) {
-            printf("*** passed %d checks\n",checks.get());
-        }
+    if (checks.get() > 0) {
+        printf("*** passed %d checkes\n",checks.get());
     }
-    printf("shutdown\n",SMP::me());
+    printf("core %d requested shutdown\n",SMP::me());
     shutdown_called = true;
     while (true) {
         outb(0xf4,0x00);
@@ -57,7 +53,7 @@ void Debug::vpanic(const char* fmt, va_list ap) {
     shutdown_called = true;
     while (true) {
         outb(0xf4,0x00);
- 	    asm volatile("pause");
+	asm volatile("pause");
     }
     //printf("| system shutdown\n");
     //while (true) asm volatile ("hlt");

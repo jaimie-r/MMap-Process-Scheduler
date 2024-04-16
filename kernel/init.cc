@@ -14,6 +14,9 @@
 #include "physmem.h"
 #include "vmm.h"
 #include "stdint.h"
+#include "tss.h"
+#include "sys.h"
+#include "process.h"
 
 struct Stack {
     static constexpr int BYTES = 4096;
@@ -95,14 +98,20 @@ extern "C" void kernelInit(void) {
         Debug::init(new U8250);
         Debug::printf("| switched to new UART\n");
 
-        /* running global constructors */
-        CRT::init();
-
         /* initialize physmem */
         PhysMem::init(VMM_FRAMES, kConfig.memSize - VMM_FRAMES);
 
+        /* running global constructors */
+        //CRT::init();
+
         /* initialize VMM */
         VMM::global_init();
+
+        /* global constructors */
+        CRT::init();
+
+        /* initialize system calls */
+        SYS::init();
 
         /* initialize the thread module */
         threadsInit();
@@ -141,12 +150,17 @@ extern "C" void kernelInit(void) {
 
     auto id = SMP::me();
 
+    Debug::printf("| initializing TSS:ss0 for %d\n",id);
+    tss[id].ss0 = kernelSS;
+    ltr(tssDescriptorBase + id * 8);
+
     Debug::printf("| %d enabling interrupts, I'm scared\n",id);
     sti();
 
     auto myOrder = howManyAreHere.add_fetch(1);
     if (myOrder == kConfig.totalProcs) {
-        thread([] {
+        auto initProc = Shared<Process>::make(true);
+        thread(initProc,[] {
             kernelMain();
             Debug::shutdown();
         });

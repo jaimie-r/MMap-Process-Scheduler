@@ -21,6 +21,8 @@ public:
 
     // Can't copy a future
     Future(const Future&) = delete;
+    Future& operator=(const Future& rhs) = delete;
+    Future& operator=(Future&& rhs) = delete;
     
     void set(T v) {
         ASSERT(!isReady);

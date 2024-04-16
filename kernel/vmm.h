@@ -2,13 +2,11 @@
 #define _VMM_H_
 
 #include "stdint.h"
-#include "shared.h"
-#include "physmem.h"
-
-class Node;
 
 namespace gheith {
-    extern uint32_t* global_pd;
+    extern uint32_t* make_pd();
+    extern void delete_pd(uint32_t*);
+    extern void delete_private(uint32_t*);
 }
 
 namespace VMM {
@@ -18,13 +16,6 @@ namespace VMM {
 
     // Called on each core to do per-core initialization
     extern void per_core_init();
-
-    // naive mmap
-    extern void* naive_mmap(uint32_t size, Shared<Node> file, uint32_t file_offset);
-
-    // naive munmap
-    void naive_munmap(void* p);
-
 }
 
 #endif

@@ -1,5 +1,5 @@
 SHELL := $(shell which bash)
-TEST_EXTS = .cc .ok
+TEST_EXTS = .ok
 UTCS_ID ?= $(shell pwd | sed -e 's/.*_//')
 
 MY_TESTS = ${addprefix ${UTCS_ID},${TEST_EXTS}}
@@ -46,7 +46,7 @@ QEMU_FLAGS = -no-reboot \
 	     -nographic\
 	     --monitor none \
 	     --serial file:$*.raw \
-             -drive file=kernel/build/$*.img,index=0,media=disk,format=raw \
+             -drive file=kernel/build/kernel.img,index=0,media=disk,format=raw \
              -drive file=$*.data,index=1,media=disk,format=raw \
 	     -device isa-debug-exit,iobase=0xf4,iosize=0x04
 
@@ -54,7 +54,7 @@ TIME = $(shell which time)
 
 .PHONY: ${TESTS} sig test tests all clean ${TEST_TARGETS} help qemu_config_flags qemu_cmd before_test history
 
-all : ${TESTS};
+all : the_kernel;
 
 help:
 	@echo ""
@@ -157,21 +157,21 @@ qemu_cmd:
 qemu_config_flags:
 	@echo "${QEMU_CONFIG_FLAGS}"
 
-$(TESTS) : % :
-	@$(MAKE) -C kernel TESTS_DIR=${realpath ${TESTS_DIR}} --no-print-directory build/$*.img
+the_kernel :
+	@$(MAKE) -C kernel --no-print-directory build/kernel.img
 
 clean:
 	rm -rf *.diff *.raw *.out *.result *.kernel *.failure *.time *.data
 	(make -C kernel clean)
 
-${TEST_RAWS} : %.raw : Makefile % %.data
+${TEST_RAWS} : %.raw : Makefile the_kernel %.data
 	@echo -n "$* ... "
 	@rm -f $*.raw $*.failure
 	@touch $*.failure
 	@echo "*** failed to run, look in $*.failure for more details" > $*.raw
 	-(${TIME} --quiet -o $*.time -f "%E" ${QEMU_TIMEOUT_CMD} ${QEMU_TIMEOUT} ${QEMU_CMD} ${QEMU_FLAGS} > $*.failure 2>&1); if [ $$? -eq 124 ]; then echo "timeout" > $*.failure; echo "timeout" > $*.time; fi
 
-BLOCK_SIZE = 4096
+BLOCK_SIZE = 1024
 
 ${TEST_DATA} : %.data : Makefile
 	@rm -f $*.data

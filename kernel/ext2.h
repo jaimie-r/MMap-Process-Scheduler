@@ -253,15 +253,39 @@ public:
     // Returns a null reference if "name" doesn't exist in the directory
     //
     // Panics if "dir" is not a directory
-    Shared<Node> find(Shared<Node> dir, const char* name) {
-        uint32_t number = dir->find(name);
-        if (number == 0) {
-            return Shared<Node>{};
-        } else {
-            //Debug::printf("found %s at %d\n",name,number);
-            return get_node(number);
+    Shared<Node> find(Shared<Node> current, const char* path) {
+        auto part = new char[257];
+        uint32_t idx = 0;
+
+        while (true) {
+            while (path[idx] == '/') idx++;
+            if ((current == nullptr) || (path[idx] == 0)) {
+                goto done;
+            }
+            uint32_t i = 0;
+            while (true) {
+                auto c = path[idx];
+                if ((c == 0) || (c == '/')) break;
+                idx ++;
+                ASSERT(i < 256);
+                part[i++] = c;
+            }
+            part[i] = 0;
+            auto number = current->find(part);
+            if (number == 0) {
+                current = Shared<Node>{};
+                goto done;
+            } else {
+                current = get_node(number);
+            }
         }
+
+        done:
+            delete[] part;
+            return current;
     }
+
+    
 
 };
 
