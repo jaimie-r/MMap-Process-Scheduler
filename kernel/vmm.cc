@@ -29,7 +29,7 @@ namespace gheith {
         pt[pti] = pa | 3;
     }
 
-    void umap(uint32_t* pd, uint32_t va, uint32_t pa) {
+    void user_map(uint32_t* pd, uint32_t va, uint32_t pa) {
         auto pdi = va >> 22;
         auto pti = (va >> 12) & 0x3FF;
         auto pde = pd[pdi];
@@ -210,7 +210,7 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
 
     if (va >= 0x80000000) {
         auto pa = PhysMem::alloc_frame();
-        umap(me->process->pd,va,pa);
+        user_map(me->process->pd,va,pa);
         return;
     }
     current()->process->exit(1);
