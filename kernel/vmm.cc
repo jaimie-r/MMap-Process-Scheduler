@@ -173,6 +173,10 @@ void naive_munmap(void* p_) {
     }
 }
 
+int munmap(void *addr, size_t len) {
+    
+}
+
 void* naive_mmap(uint32_t sz_, Shared<Node> node, uint32_t offset_) {
     using namespace gheith;
     auto me = current();
@@ -196,6 +200,11 @@ void* naive_mmap(uint32_t sz_, Shared<Node> node, uint32_t offset_) {
         prev->next = new_entry;
     }
     return (uint32_t*) va;
+}
+
+
+void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
+
 }
 
 } /* namespace vmm */
