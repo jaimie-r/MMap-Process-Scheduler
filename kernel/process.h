@@ -10,6 +10,18 @@
 #include "file.h"
 #include "u8250.h"
 #include "shared.h"
+#include "ext2.h"
+
+struct VMEntry {
+    VMEntry(Shared<Node> file, uint32_t size, uint32_t starting_address, uint32_t offset, VMEntry* next) :
+            file(file), size(size), starting_address(starting_address), offset(offset), next(next) {};
+
+    Shared<Node> file;
+    uint32_t size;
+    uint32_t starting_address;
+    uint32_t offset;
+    VMEntry* next;
+};
 
 class Process {
 	constexpr static int NSEM = 10;
@@ -30,6 +42,8 @@ class Process {
 public:
     Shared<Future<uint32_t>> output = Shared<Future<uint32_t>>::make();// { new Future<uint32_t>() };
     uint32_t *pd = gheith::make_pd();
+    VMEntry* entry_list;
+
     static Shared<Process> kernelProcess;
 
 	Process(bool isInit);

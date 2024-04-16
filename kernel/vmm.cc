@@ -148,6 +148,56 @@ void per_core_init() {
     });
 }
 
+void naive_munmap(void* p_) {
+    using namespace gheith;
+    uint32_t va = PhysMem::framedown((uint32_t) p_);
+    if (va < 0x80000000 || va == kConfig.ioAPIC || va == kConfig.localAPIC) return;
+    auto me = current();
+    VMEntry* prev = nullptr;
+    VMEntry* temp = me->process->entry_list;
+    while (temp != nullptr) {
+        if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
+            if (prev == nullptr) {
+                me->process->entry_list = temp->next;
+            } else {
+                prev->next = temp->next;
+            }
+            for (uint32_t va = temp->starting_address; va < temp->starting_address + temp->size; va += PhysMem::FRAME_SIZE) {
+                unmap(me->process->pd, va);
+            }
+            delete temp;
+            return;
+        }
+        prev = temp;
+        temp = temp->next;
+    }
+}
+
+void* naive_mmap(uint32_t sz_, Shared<Node> node, uint32_t offset_) {
+    using namespace gheith;
+    auto me = current();
+    
+    uint32_t va = 0x80000000;
+    uint32_t size = PhysMem::frameup(sz_);
+    VMEntry* prev = nullptr;
+    VMEntry* temp = me->process->entry_list;
+    while (temp != nullptr) {
+        if (va + size <= temp->starting_address) {
+            break;
+        }
+        va = temp->starting_address + temp->size;
+        prev = temp;
+        temp = temp->next;
+    }
+    VMEntry* new_entry = new VMEntry(node, size, va, offset_, temp);
+    if (prev == nullptr) {
+        me->process->entry_list = new_entry;
+    } else {
+        prev->next = new_entry;
+    }
+    return (uint32_t*) va;
+}
+
 } /* namespace vmm */
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
