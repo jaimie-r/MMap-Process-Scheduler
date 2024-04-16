@@ -1,0 +1,23 @@
+#!/bin/bash
+
+if which md5sum > /dev/null 2>&1; then
+    IMAGE_TAG=`md5sum Dockerfile | sed -e 's/ .*//'`
+else
+    IMAGE_TAG=`md5 < Dockerfile`
+fi
+
+IMAGE_NAME=cs439_s21:$IMAGE_TAG
+
+if [[ "$(docker images -q $IMAGE_NAME 2> /dev/null)" == "" ]]; then
+    echo "docker image ($IMAGE_NAME) does not exist"
+    echo "   building it, will take a few minutes"
+    docker build -t ${IMAGE_NAME} .
+fi
+
+docker run \
+    --rm \
+    -v ${PWD}:/work \
+    -w /work \
+    -u `id -u ${USER}`:`id -g ${USER}` \
+    -ti ${IMAGE_NAME} \
+    "$@"

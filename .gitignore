@@ -1,0 +1,13 @@
+.nfs*
+*.time
+*.failure
+*.raw
+*.out
+*.result
+*.diff
+*.data
+all_tests/
+all_results/
+my_results/
+my_submission/
+history
