@@ -31,6 +31,9 @@ public:
         it->put(*((char*)buffer));
         return 1;
     }
+    Shared<Node> getNode() {
+        return Shared<Node>();
+    }
 };
 
 

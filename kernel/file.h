@@ -4,6 +4,7 @@
 #include "atomic.h"
 #include "stdint.h"
 #include "shared.h"
+#include "ext2.h"
 
 class File {
     Atomic<uint32_t> ref_count;
@@ -16,6 +17,7 @@ public:
     virtual off_t seek(off_t offset) = 0;
     virtual ssize_t read(void* buf, size_t size) = 0;
     virtual ssize_t write(void* buf, size_t size) = 0;
+    virtual Shared<Node> getNode() = 0;
 
     friend class Shared<File>;
 };

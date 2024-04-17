@@ -15,7 +15,20 @@ namespace gheith {
 
     using namespace PhysMem;
 
+    struct NodeEntry {
+        NodeEntry(Shared<Node> file, uint32_t pa) : file(file), pa(pa) {
+            num_processes = 1;
+            next = nullptr;
+        }
+
+        Shared<Node> file;
+        uint32_t num_processes;
+        uint32_t pa;
+        NodeEntry* next;
+    };
+
     uint32_t* shared = nullptr;
+    NodeEntry* node_list = nullptr;
 
     void map(uint32_t* pd, uint32_t va, uint32_t pa) {
         auto pdi = va >> 22;
@@ -148,63 +161,84 @@ void per_core_init() {
     });
 }
 
-void naive_munmap(void* p_) {
-    using namespace gheith;
-    uint32_t va = PhysMem::framedown((uint32_t) p_);
-    if (va < 0x80000000 || va == kConfig.ioAPIC || va == kConfig.localAPIC) return;
-    auto me = current();
-    VMEntry* prev = nullptr;
-    VMEntry* temp = me->process->entry_list;
-    while (temp != nullptr) {
-        if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
-            if (prev == nullptr) {
-                me->process->entry_list = temp->next;
-            } else {
-                prev->next = temp->next;
-            }
-            for (uint32_t va = temp->starting_address; va < temp->starting_address + temp->size; va += PhysMem::FRAME_SIZE) {
-                unmap(me->process->pd, va);
-            }
-            delete temp;
-            return;
-        }
-        prev = temp;
-        temp = temp->next;
-    }
-}
+// void naive_munmap(void* p_) {
+//     using namespace gheith;
+//     uint32_t va = PhysMem::framedown((uint32_t) p_);
+//     if (va < 0x80000000 || va == kConfig.ioAPIC || va == kConfig.localAPIC) return;
+//     auto me = current();
+//     VMEntry* prev = nullptr;
+//     VMEntry* temp = me->process->entry_list;
+//     while (temp != nullptr) {
+//         if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
+//             if (prev == nullptr) {
+//                 me->process->entry_list = temp->next;
+//             } else {
+//                 prev->next = temp->next;
+//             }
+//             for (uint32_t va = temp->starting_address; va < temp->starting_address + temp->size; va += PhysMem::FRAME_SIZE) {
+//                 unmap(me->process->pd, va);
+//             }
+//             delete temp;
+//             return;
+//         }
+//         prev = temp;
+//         temp = temp->next;
+//     }
+// }
 
 int munmap(void *addr, size_t len) {
-    
+    return 0;
 }
 
-void* naive_mmap(uint32_t sz_, Shared<Node> node, uint32_t offset_) {
+// void* naive_mmap(uint32_t sz_, Shared<Node> node, uint32_t offset_) {
+//     using namespace gheith;
+//     auto me = current();
+    
+//     uint32_t va = 0x80000000;
+//     uint32_t size = PhysMem::frameup(sz_);
+//     VMEntry* prev = nullptr;
+//     VMEntry* temp = me->process->entry_list;
+//     while (temp != nullptr) {
+//         if (va + size <= temp->starting_address) {
+//             break;
+//         }
+//         va = temp->starting_address + temp->size;
+//         prev = temp;
+//         temp = temp->next;
+//     }
+//     VMEntry* new_entry = new VMEntry(node, size, va, offset_, temp);
+//     if (prev == nullptr) {
+//         me->process->entry_list = new_entry;
+//     } else {
+//         prev->next = new_entry;
+//     }
+//     return (uint32_t*) va;
+// }
+
+
+void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
     using namespace gheith;
     auto me = current();
-    
+    uint32_t final_va = addr == 0 ? 0x80000000 : (uint32_t) addr;
     uint32_t va = 0x80000000;
-    uint32_t size = PhysMem::frameup(sz_);
+    uint32_t size = PhysMem::frameup(length);
     VMEntry* prev = nullptr;
     VMEntry* temp = me->process->entry_list;
     while (temp != nullptr) {
-        if (va + size <= temp->starting_address) {
+        if (va + size <= temp->starting_address && va >= final_va) {
             break;
         }
         va = temp->starting_address + temp->size;
         prev = temp;
         temp = temp->next;
     }
-    VMEntry* new_entry = new VMEntry(node, size, va, offset_, temp);
+    VMEntry* new_entry = new VMEntry(me->process->getFile(fd)->getNode(), size, va, offset, temp);
     if (prev == nullptr) {
         me->process->entry_list = new_entry;
     } else {
         prev->next = new_entry;
     }
     return (uint32_t*) va;
-}
-
-
-void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
-
 }
 
 } /* namespace vmm */
@@ -219,9 +253,55 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
 
     if (va >= 0x80000000) {
         auto pa = PhysMem::alloc_frame();
-        user_map(me->process->pd,va,pa);
+        user_map(me->process->pd, va, pa);
         return;
     }
+
+    // if (va >= 0x80000000) {
+    //     auto temp = me->process->entry_list;
+    //     while (temp != nullptr) {
+    //         if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
+    //             NodeEntry* prev = nullptr;
+    //             NodeEntry* temp2 = node_list;
+    //             while (temp2 != nullptr) {
+    //                 if (temp->file->number == temp2->file->number) {
+    //                     break;
+    //                 }
+    //                 prev = temp2;
+    //                 temp2 = temp2->next;
+    //             }
+    //             uint32_t pa;
+    //             if (temp2 != nullptr) {
+    //                 pa = temp2->pa;
+    //                 temp2->num_processes++;
+    //             } else {
+    //                 pa = PhysMem::alloc_frame();
+    //                 NodeEntry* new_entry = new NodeEntry(temp->file, pa);
+    //                 if (prev == nullptr) {
+    //                     node_list = new_entry;
+    //                 } else {
+    //                     prev->next = new_entry;
+    //                 }
+    //                 if (temp->file != nullptr) {
+    //                     auto read = temp->file->read_all(temp->offset + va - temp->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
+    //                     if (read != PhysMem::FRAME_SIZE) {
+    //                         if (read == -1) read = 0;
+    //                         for (int i = 0; i < PhysMem::FRAME_SIZE - read; i++) {
+    //                             ((char*) pa)[read + i] = 0;
+    //                         }
+    //                     }
+    //                 } else {
+    //                     for (uint32_t i = 0; i < PhysMem::FRAME_SIZE; i++) {
+    //                         ((char*) pa)[i] = 0;
+    //                     }
+    //                 }
+    //             }
+    //             user_map(me->process->pd, va, pa);
+    //             return;
+    //         }
+    //         temp = temp->next;
+    //     }
+    // }
     current()->process->exit(1);
     stop();
 }

@@ -36,6 +36,9 @@ public:
     ssize_t write(void* buffer, size_t n) {
         return -1;
     }
+    Shared<Node> getNode() {
+        return node;
+    }
 };
 
 int SYS::exec(const char* path,
