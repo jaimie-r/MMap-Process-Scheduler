@@ -250,58 +250,58 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     ASSERT(me->saveArea.cr3 == getCR3());
 
     uint32_t va = PhysMem::framedown(va_);
+    auto temp = me->process->entry_list;
 
-    if (va >= 0x80000000) {
+    if (va >= 0x80000000 && temp == nullptr) {
         auto pa = PhysMem::alloc_frame();
         user_map(me->process->pd, va, pa);
         return;
+    } else if (va >= 0x80000000) {
+        while (temp != nullptr) {
+            if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
+                NodeEntry* prev = nullptr;
+                NodeEntry* temp2 = node_list;
+                if (temp2 != nullptr) {
+                    while (temp2 != nullptr) {
+                        if (temp->file->number == temp2->file->number) {
+                            break;
+                        }
+                        prev = temp2;
+                        temp2 = temp2->next;
+                    }
+                }
+                uint32_t pa;
+                if (temp2 != nullptr) {
+                    pa = temp2->pa;
+                    temp2->num_processes++;
+                } else {
+                    pa = PhysMem::alloc_frame();
+                    NodeEntry* new_entry = new NodeEntry(temp->file, pa);
+                    if (prev == nullptr) {
+                        node_list = new_entry;
+                    } else {
+                        prev->next = new_entry;
+                    }
+                    if (temp->file != nullptr) {
+                        auto read = temp->file->read_all(temp->offset + va - temp->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
+                        if (read != PhysMem::FRAME_SIZE) {
+                            if (read == -1) read = 0;
+                            for (int i = 0; i < PhysMem::FRAME_SIZE - read; i++) {
+                                ((char*) pa)[read + i] = 0;
+                            }
+                        }
+                    } else {
+                        for (uint32_t i = 0; i < PhysMem::FRAME_SIZE; i++) {
+                            ((char*) pa)[i] = 0;
+                        }
+                    }
+                }
+                user_map(me->process->pd, va, pa);
+                return;
+            }
+            temp = temp->next;
+        }
     }
-
-    // if (va >= 0x80000000) {
-    //     auto temp = me->process->entry_list;
-    //     while (temp != nullptr) {
-    //         if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
-    //             NodeEntry* prev = nullptr;
-    //             NodeEntry* temp2 = node_list;
-    //             while (temp2 != nullptr) {
-    //                 if (temp->file->number == temp2->file->number) {
-    //                     break;
-    //                 }
-    //                 prev = temp2;
-    //                 temp2 = temp2->next;
-    //             }
-    //             uint32_t pa;
-    //             if (temp2 != nullptr) {
-    //                 pa = temp2->pa;
-    //                 temp2->num_processes++;
-    //             } else {
-    //                 pa = PhysMem::alloc_frame();
-    //                 NodeEntry* new_entry = new NodeEntry(temp->file, pa);
-    //                 if (prev == nullptr) {
-    //                     node_list = new_entry;
-    //                 } else {
-    //                     prev->next = new_entry;
-    //                 }
-    //                 if (temp->file != nullptr) {
-    //                     auto read = temp->file->read_all(temp->offset + va - temp->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
-    //                     if (read != PhysMem::FRAME_SIZE) {
-    //                         if (read == -1) read = 0;
-    //                         for (int i = 0; i < PhysMem::FRAME_SIZE - read; i++) {
-    //                             ((char*) pa)[read + i] = 0;
-    //                         }
-    //                     }
-    //                 } else {
-    //                     for (uint32_t i = 0; i < PhysMem::FRAME_SIZE; i++) {
-    //                         ((char*) pa)[i] = 0;
-    //                     }
-    //                 }
-    //             }
-    //             user_map(me->process->pd, va, pa);
-    //             return;
-    //         }
-    //         temp = temp->next;
-    //     }
-    // }
     current()->process->exit(1);
     stop();
 }
