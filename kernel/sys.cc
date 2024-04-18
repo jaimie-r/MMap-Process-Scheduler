@@ -259,6 +259,18 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
             }
             return file->seek(offset);
         }
+    case 14: /* mmap */
+        {
+            //void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+            void *addr = (void *)userEsp[1];
+            size_t length = (size_t)userEsp[2];
+            int prot = (int)userEsp[3];
+            int flags = (int)userEsp[4];
+            int fd = (int)userEsp[5];
+            off_t offset = (off_t)userEsp[6];
+            void *va = VMM::mmap(addr, length, prot, flags, fd, offset);
+            return (uint32_t)va; //idk if this is the correct way to do this.
+        }
     default:
         {
             Debug::printf("*** 1000000000 unknown system call %d\n",eax);

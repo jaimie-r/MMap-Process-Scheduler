@@ -112,3 +112,9 @@ seek:
 	mov $13,%eax
 	int $48
 	ret
+
+	# void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+mmap:
+	mov $14, %eax
+	int $48
+	ret

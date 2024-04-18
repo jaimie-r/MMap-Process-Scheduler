@@ -78,4 +78,6 @@ extern int fork();
 /* a nullptr indicates end of arguments */
 extern int execl(const char* path, const char* arg0, ...);
 
+// extern void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+
 #endif
