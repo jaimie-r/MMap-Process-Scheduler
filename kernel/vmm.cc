@@ -257,12 +257,16 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
         user_map(me->process->pd, va, pa);
         return;
     } else if (va >= 0x80000000) {
+        // looping through entry list
         while (temp != nullptr) {
+            // finding correct vmentry
             if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
+                // looping through node list
                 NodeEntry* prev = nullptr;
                 NodeEntry* temp2 = node_list;
                 if (temp2 != nullptr) {
                     while (temp2 != nullptr) {
+                        // found entry in node list (meaning it exists in physmem alr)
                         if (temp->file->number == temp2->file->number) {
                             break;
                         }
@@ -272,18 +276,23 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                 }
                 uint32_t pa;
                 if (temp2 != nullptr) {
+                    // node is physmem
                     pa = temp2->pa;
                     temp2->num_processes++;
                 } else {
+                    // not in physmem yet so allocate
                     pa = PhysMem::alloc_frame();
+                    // add to node list
                     NodeEntry* new_entry = new NodeEntry(temp->file, pa);
                     if (prev == nullptr) {
                         node_list = new_entry;
                     } else {
                         prev->next = new_entry;
                     }
+                    // reading in file
                     if (temp->file != nullptr) {
                         auto read = temp->file->read_all(temp->offset + va - temp->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
+                        // zero out the rest of the alloced space
                         if (read != PhysMem::FRAME_SIZE) {
                             if (read == -1) read = 0;
                             for (int i = 0; i < PhysMem::FRAME_SIZE - read; i++) {
