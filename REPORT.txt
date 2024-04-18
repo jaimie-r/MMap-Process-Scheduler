@@ -1,0 +1,8 @@
+(1) What will you do?
+
+(2) Who are the team members?
+
+(3) What research did you do? Links to articles, papers, etc.
+
+(4) Describe any design / implementation you did. Include code and documents
+    as appropriate
