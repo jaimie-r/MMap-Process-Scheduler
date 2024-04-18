@@ -271,6 +271,12 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
             void *va = VMM::mmap(addr, length, prot, flags, fd, offset);
             return (uint32_t)va; //idk if this is the correct way to do this.
         }
+    case 15:
+        {
+            void *addr = (void *)userEsp[1];
+            size_t length = (size_t)userEsp[2];
+            return VMM::munmap(addr, length);
+        }
     default:
         {
             Debug::printf("*** 1000000000 unknown system call %d\n",eax);

@@ -118,3 +118,7 @@ mmap:
 	mov $14, %eax
 	int $48
 	ret
+munmap:
+	mov $15, %eax
+	int $48
+	ret

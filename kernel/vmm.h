@@ -18,6 +18,8 @@ namespace VMM {
     extern void per_core_init();
 
     extern void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+
+    extern int munmap (void *addr, size_t len);
 }
 
 #endif
