@@ -43,6 +43,5 @@ int64_t BlockIO::read_all(uint32_t offset, uint32_t n, char* buffer) {
         n -= cnt;
         buffer += cnt;
     }
-    Debug::printf("bytes read: %d\n", total_count);
     return total_count;
 }

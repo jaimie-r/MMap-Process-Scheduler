@@ -70,8 +70,6 @@ int SYS::exec(const char* path,
 
     uint32_t e = ELF::load(file);
 
-    Debug::printf("exec 2\n");
-
     uint32_t total_bytes = 12 + (4 * argc);
     uint32_t* lengths = new uint32_t[argc];
     for (int i = 0; i < argc; i++) {
@@ -82,8 +80,10 @@ int SYS::exec(const char* path,
     }
 
     sp -= total_bytes;
+    Debug::printf("exec 1\n");
 
     ((uint32_t*) sp)[0] = argc;
+    Debug::printf("exec 2\n");
 
     char** argv_ptr = (char**) (sp + 8);
     ((uint32_t*) sp)[1] = (uint32_t) argv_ptr;
@@ -99,8 +99,6 @@ int SYS::exec(const char* path,
     argv_ptr[argc] = 0;
 
     file = nullptr;
-
-    Debug::printf("exec 2\n");
 
     switchToUser(e,sp,0);
     Debug::panic("*** implement switchToUser");

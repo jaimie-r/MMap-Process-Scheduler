@@ -24,10 +24,8 @@ uint32_t ELF::load(Shared<Node> file) {
 
             Debug::printf("vaddr:%x memsz:0x%x filesz:0x%x fileoff:%x\n",
                 p,memsz,filesz,phdr.offset);
-            void *x = VMM::mmap(p, filesz, 0, 0, -1, phdr.offset);
-            Debug::printf("mmap returned pointer: %x program header number: %d\n", (int)x, hdr.phnum);
+            VMM::mmap(p, memsz, 0, 0, -1, phdr.offset);
             file->read_all(phdr.offset,filesz,p);
-            Debug::printf("load 5\n");
             bzero(p + filesz, memsz - filesz);
         }
     }

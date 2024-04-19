@@ -260,13 +260,11 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
         prev = temp;
         temp = temp->next;
     }
-    Debug::printf("mmap 2\n");
     Shared<Node> file = (Shared<Node>)nullptr;
     if(fd >= 0) {
         file = me->process->getFile(fd)->getNode();
     } 
     VMEntry* new_entry = new VMEntry(file, size, va, offset, temp);
-    Debug::printf("mmap 3\n");
     if (prev == nullptr) {
         me->process->entry_list = new_entry;
     } else {
@@ -279,7 +277,7 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     using namespace gheith;
-    Debug::printf("page fault va: %x\n", (int)va_);
+    Debug::printf("page fault at: %x\n", (int)va_);
     auto me = current();
     ASSERT((uint32_t)me->process->pd == getCR3());
     ASSERT(me->saveArea.cr3 == getCR3());
@@ -294,53 +292,69 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     if (va >= 0x80000000) {
         // looping through entry list
         while (temp != nullptr) {
+            Debug::printf("page fault 1\n");
             // finding correct vmentry
             if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
-                // looping through node list
-                NodeEntry* prev = nullptr;
-                NodeEntry* temp2 = node_list;
-                if (temp2 != nullptr) {
-                    while (temp2 != nullptr) {
-                        // found entry in node list (meaning it exists in physmem alr)
-                        if (temp->file->number == temp2->file->number) {
-                            break;
-                        }
-                        prev = temp2;
-                        temp2 = temp2->next;
-                    }
-                }
+                Debug::printf("page fault 2\n");
                 uint32_t pa;
-                if (temp2 != nullptr) {
-                    // node is physmem
-                    pa = temp2->pa;
-                    temp2->num_processes++;
-                } else {
+                // check if the vmentry is map anonymous (meaning file is null)
+                if(temp->file == nullptr) {
+                    // is map anonymous
                     // not in physmem yet so allocate
                     pa = PhysMem::alloc_frame();
-                    // add to node list
-                    NodeEntry* new_entry = new NodeEntry(temp->file, pa);
-                    if (prev == nullptr) {
-                        node_list = new_entry;
-                    } else {
-                        prev->next = new_entry;
+                    for (uint32_t i = 0; i < PhysMem::FRAME_SIZE; i++) {
+                        ((char*) pa)[i] = 0;
                     }
-                    // reading in file
-                    if (temp->file != nullptr) {
-                        auto read = temp->file->read_all(temp->offset + va - temp->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
-                        // zero out the rest of the alloced space
-                        if (read != PhysMem::FRAME_SIZE) {
-                            if (read == -1) read = 0;
-                            for (int i = 0; i < PhysMem::FRAME_SIZE - read; i++) {
-                                ((char*) pa)[read + i] = 0;
+                } else {
+                    // look for in node list
+                    NodeEntry* prev = nullptr;
+                    NodeEntry* temp2 = node_list;
+                    if (temp2 != nullptr) {
+                        while (temp2 != nullptr) {
+                            // found entry in node list (meaning it exists in physmem alr)
+                            if (temp->file->number == temp2->file->number) {
+                                break;
                             }
+                            Debug::printf("page fault 5\n");
+                            prev = temp2;
+                            temp2 = temp2->next;
+                            Debug::printf("page fault 4\n");
                         }
+                    }
+                    if (temp2 != nullptr) {
+                        // node is physmem
+                        pa = temp2->pa;
+                        temp2->num_processes++;
                     } else {
-                        for (uint32_t i = 0; i < PhysMem::FRAME_SIZE; i++) {
-                            ((char*) pa)[i] = 0;
+                        // not in physmem yet so allocate
+                        pa = PhysMem::alloc_frame();
+                        // add to node list
+                        NodeEntry* new_entry = new NodeEntry(temp->file, pa);
+                        if (prev == nullptr) {
+                            node_list = new_entry;
+                        } else {
+                            prev->next = new_entry;
+                        }
+                        Debug::printf("page fault 4\n");
+                        // reading in file
+                        if (temp->file != nullptr) {
+                            auto read = temp->file->read_all(temp->offset + va - temp->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
+                            // zero out the rest of the alloced space
+                            if (read != PhysMem::FRAME_SIZE) {
+                                if (read == -1) read = 0;
+                                for (int i = 0; i < PhysMem::FRAME_SIZE - read; i++) {
+                                    ((char*) pa)[read + i] = 0;
+                                }
+                            }
+                        } else {
+                            for (uint32_t i = 0; i < PhysMem::FRAME_SIZE; i++) {
+                                ((char*) pa)[i] = 0;
+                            }
                         }
                     }
                 }
                 user_map(me->process->pd, va, pa);
+                Debug::printf("page fault done\n");
                 return;
             }
             temp = temp->next;
