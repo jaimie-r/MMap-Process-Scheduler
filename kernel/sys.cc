@@ -41,9 +41,7 @@ public:
     }
 };
 
-/*
-    
-*/
+
 int SYS::exec(const char* path,
               int argc,
               const char* argv[]
@@ -69,6 +67,9 @@ int SYS::exec(const char* path,
     me->process->clear_private();
 
     uint32_t e = ELF::load(file);
+
+    // mmap stack
+    sp = (uint32_t)VMM::mmap((uint32_t *)sp, 4000000, 0,0, -1, 0);
 
     uint32_t total_bytes = 12 + (4 * argc);
     uint32_t* lengths = new uint32_t[argc];
