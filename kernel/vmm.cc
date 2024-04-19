@@ -277,7 +277,6 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     using namespace gheith;
-    Debug::printf("page fault at: %x\n", (int)va_);
     auto me = current();
     ASSERT((uint32_t)me->process->pd == getCR3());
     ASSERT(me->saveArea.cr3 == getCR3());
@@ -292,10 +291,8 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     if (va >= 0x80000000) {
         // looping through entry list
         while (temp != nullptr) {
-            Debug::printf("page fault 1\n");
             // finding correct vmentry
             if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
-                Debug::printf("page fault 2\n");
                 uint32_t pa;
                 // check if the vmentry is map anonymous (meaning file is null)
                 if(temp->file == nullptr) {
@@ -315,10 +312,8 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                             if (temp->file->number == temp2->file->number) {
                                 break;
                             }
-                            Debug::printf("page fault 5\n");
                             prev = temp2;
                             temp2 = temp2->next;
-                            Debug::printf("page fault 4\n");
                         }
                     }
                     if (temp2 != nullptr) {
@@ -335,7 +330,6 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                         } else {
                             prev->next = new_entry;
                         }
-                        Debug::printf("page fault 4\n");
                         // reading in file
                         if (temp->file != nullptr) {
                             auto read = temp->file->read_all(temp->offset + va - temp->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
@@ -354,7 +348,6 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                     }
                 }
                 user_map(me->process->pd, va, pa);
-                Debug::printf("page fault done\n");
                 return;
             }
             temp = temp->next;

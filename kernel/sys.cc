@@ -81,10 +81,8 @@ int SYS::exec(const char* path,
     }
 
     sp -= total_bytes;
-    Debug::printf("exec 1\n");
 
     ((uint32_t*) sp)[0] = argc;
-    Debug::printf("exec 2\n");
 
     char** argv_ptr = (char**) (sp + 8);
     ((uint32_t*) sp)[1] = (uint32_t) argv_ptr;
@@ -217,14 +215,12 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
             if (node == nullptr) {
                 return -1;
             }
-            Debug::printf("open 1\n");
             while (node->is_symlink()) {
                 char symbol[node->size_in_bytes() + 1];
                 node->get_symbol(symbol);
                 symbol[node->size_in_bytes()] = 0;
                 node = root_fs->find(root_fs->root, symbol);
             }
-            Debug::printf("open 2\n");
             Shared<File> file{new FileDescriptor(node)};
             return current()->process->setFile(file);
         }

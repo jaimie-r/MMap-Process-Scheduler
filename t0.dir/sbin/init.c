@@ -8,10 +8,8 @@ void one(int fd) {
 }
 
 int main(int argc, char** argv) {
-    printf("before open\n");
+    
     int fd = open("/etc/data.txt",0);
-    printf("after open\n");
-    // one(fd);
 
     char * contents = (char *)mmap(0, 20, 0, 0, fd, 0);
     printf("*** 1\n");
