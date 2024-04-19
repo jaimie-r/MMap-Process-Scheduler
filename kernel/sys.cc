@@ -41,6 +41,9 @@ public:
     }
 };
 
+/*
+    
+*/
 int SYS::exec(const char* path,
               int argc,
               const char* argv[]
@@ -53,7 +56,6 @@ int SYS::exec(const char* path,
     if (!file->is_file()) {
         return -1;
     }
-    Debug::printf("exec 1\n");
 
     uint32_t sp = 0xefffe000;
 

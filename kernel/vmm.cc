@@ -260,7 +260,13 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
         prev = temp;
         temp = temp->next;
     }
-    VMEntry* new_entry = new VMEntry(me->process->getFile(fd)->getNode(), size, va, offset, temp);
+    Debug::printf("mmap 2\n");
+    Shared<Node> file = (Shared<Node>)nullptr;
+    if(fd >= 0) {
+        file = me->process->getFile(fd)->getNode();
+    } 
+    VMEntry* new_entry = new VMEntry(file, size, va, offset, temp);
+    Debug::printf("mmap 3\n");
     if (prev == nullptr) {
         me->process->entry_list = new_entry;
     } else {
