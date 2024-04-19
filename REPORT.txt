@@ -1,8 +1,75 @@
 (1) What will you do?
 
+We will implement a proper mmap and a better process scheduler. We are expanding on our previous
+implementation of a naive mmap. Like naive mmap, our mmap will map a file to somewhere in a process's
+virtual address space. mmap will return a pointer to a memory mapped file. A memory mapped file is
+one where the memory of region corresponds to a traditional file on disk. The process can then dereference
+that pointer for direct access to the contents of the file. the file can be accessed as an array of bytes.
+mmap takes in more parameters, and it allows file mappings to be shared across processes.
+
 (2) Who are the team members?
+
+Our team is made up of Megan Domingo, Gracelynn Ray, and Jaimie Ren.
 
 (3) What research did you do? Links to articles, papers, etc.
 
-(4) Describe any design / implementation you did. Include code and documents
-    as appropriate
+These are some of our resources:
+
+https://w3.cs.jmu.edu/kirkpams/OpenCSF/Books/csf/html/MMap.html
+https://www.ibm.com/docs/en/zos/3.1.0?topic=functions-mmap-map-pages-memory
+https://www.ibm.com/docs/en/zos/3.1.0?topic=functions-munmap-unmap-pages-memory#mumap
+https://www.geeksforgeeks.org/memory-mapped-files-in-os/
+
+We used this research to get a better understanding of what mmap needs to accomplish.
+
+(4) Describe any design / implementation you did. Include code and documents as appropriate.
+
+This is the header of our new mmap:
+
+void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset)
+
+Our new mmap takes in more parameters.
+
+addr specifies the desired starting address of the mapping in memory. If addr equals 0, the implementation
+has complete freedom in selecting the PA to map memory to. For all other specified addr values,
+the given addr is taken as a suggestion of a process address near which the mapping should be placed.
+
+length specifies the length of the mapping in bytes. It indicates how much memory should be mapped
+from the file.
+
+prot specifies the desired memory protection for the mapping. It determines the permissions for accessing
+the mapped memory. These protections only apply to the current process. Ff another process maps the
+same file into its VM Space it may set different protections.
+
+flag specifies additional flags controlling the behavior of the mapping.
+
+fd identifies the file being mapped. This means that mmap is used in conjunction with the open system
+call. fd's are specific to a process, so we will need a way to track of a file has been mapped already.
+
+offset specifies the offset within the file at which the mapping should start. For our implementation,
+offset must be page-size aligned.
+
+If the mapping was successful, mmap returns the address at which the mapping was placed.
+
+We will also implement unmap:
+
+int munmap(void *addr, size_t len)
+
+This removes the mappings for pages in the range [addr, addr + len), rounding the len up to the next
+multiple of the page size. If addr isnt the address of a mapping established by a prior call to mmap(),
+the behavior is undefined.
+
+One aspect of our improved process scheduler is implementing a way to kill a process:
+
+int kill(pid_t pid, int sig);
+
+This sends a signal to a process or a group of processes. Signals are software interrupts used to
+notify processes of events or conditions.
+
+Code that we added:
+1. elf.cc: line 27
+2. sys.cc: line 72, lines 270 - 287
+3. sys.S (in t0.dir): lines 116 - 128
+4. sys.h (in t0.dir): lines 81 - 83
+5. vmm.cc: lines 189 - 365
+6. init.c (in t0.dir): lines 11 - 21
