@@ -17,9 +17,9 @@ int main(int argc, char** argv) {
     printf("after open\n");
     // one(fd);
 
-    uint32_t contents = (uint32_t)mmap(0, 20, 0, 0, fd, 0);
+    char * contents = (char *)mmap(0, 20, 0, 0, fd, 0);
     printf("*** 1\n");
-    printf("%x", (int)contents);
+    printf("%s", contents);
     // printf("*** close = %d\n",close(fd));
 
     // one(fd);
