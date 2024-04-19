@@ -187,6 +187,34 @@ void per_core_init() {
 // }
 
 int munmap(void *addr, size_t len) {
+    using namespace gheith;
+    uint32_t address = (uint32_t)addr;
+    if (address < 0x80000000 || address == kConfig.ioAPIC || address == kConfig.localAPIC) return -1;
+
+    // round len up to page size divisible number
+    uint32_t length = PhysMem::frameup(address);
+
+    auto me = current();
+    // remove from entry list
+    VMEntry* prev = nullptr;
+    VMEntry* temp = me->process->entry_list;
+    while (temp != nullptr) {
+        if (address >= temp->starting_address && address < temp->starting_address + temp->size) {
+            if (prev == nullptr) {
+                me->process->entry_list = temp->next;
+            } else {
+                prev->next = temp->next;
+            }
+            for (uint32_t va = temp->starting_address; va < temp->starting_address + length; va += PhysMem::FRAME_SIZE) {
+                unmap(me->process->pd, va);
+            }
+            delete temp;
+            return 0;
+        }
+        prev = temp;
+        temp = temp->next;
+    }
+    // NodeEntry* nodeEntry = node_list;
     return 0;
 }
 
@@ -245,6 +273,7 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     using namespace gheith;
+    Debug::printf("page fault va: %x\n", (int)va_);
     auto me = current();
     ASSERT((uint32_t)me->process->pd == getCR3());
     ASSERT(me->saveArea.cr3 == getCR3());
@@ -252,11 +281,11 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     uint32_t va = PhysMem::framedown(va_);
     auto temp = me->process->entry_list;
 
-    if (va >= 0x80000000 && temp == nullptr) {
-        auto pa = PhysMem::alloc_frame();
-        user_map(me->process->pd, va, pa);
-        return;
-    } else if (va >= 0x80000000) {
+    // if (va >= 0x80000000 && temp == nullptr) {
+    //     auto pa = PhysMem::alloc_frame();
+    //     user_map(me->process->pd, va, pa);
+    //     return;
+    if (va >= 0x80000000) {
         // looping through entry list
         while (temp != nullptr) {
             // finding correct vmentry

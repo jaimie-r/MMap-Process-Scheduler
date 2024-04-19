@@ -53,6 +53,7 @@ int SYS::exec(const char* path,
     if (!file->is_file()) {
         return -1;
     }
+    Debug::printf("exec 1\n");
 
     uint32_t sp = 0xefffe000;
 
@@ -66,6 +67,8 @@ int SYS::exec(const char* path,
     me->process->clear_private();
 
     uint32_t e = ELF::load(file);
+
+    Debug::printf("exec 2\n");
 
     uint32_t total_bytes = 12 + (4 * argc);
     uint32_t* lengths = new uint32_t[argc];
@@ -94,6 +97,8 @@ int SYS::exec(const char* path,
     argv_ptr[argc] = 0;
 
     file = nullptr;
+
+    Debug::printf("exec 2\n");
 
     switchToUser(e,sp,0);
     Debug::panic("*** implement switchToUser");
@@ -211,12 +216,14 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
             if (node == nullptr) {
                 return -1;
             }
+            Debug::printf("open 1\n");
             while (node->is_symlink()) {
                 char symbol[node->size_in_bytes() + 1];
                 node->get_symbol(symbol);
                 symbol[node->size_in_bytes()] = 0;
                 node = root_fs->find(root_fs->root, symbol);
             }
+            Debug::printf("open 2\n");
             Shared<File> file{new FileDescriptor(node)};
             return current()->process->setFile(file);
         }

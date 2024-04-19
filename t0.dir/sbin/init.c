@@ -12,10 +12,14 @@ int main(int argc, char** argv) {
     // for (int i=0; i<argc; i++) {
     //     printf("*** %s\n",argv[i]);
     // }
+    printf("before open\n");
     int fd = open("/etc/data.txt",0);
+    printf("after open\n");
     // one(fd);
 
-    uint32_t *contents = (uint32_t *)mmap(0, 20, 0, 0, fd, 0);
+    uint32_t contents = (uint32_t)mmap(0, 20, 0, 0, fd, 0);
+    printf("*** 1");
+    printf("%x", (int)contents);
     // printf("*** close = %d\n",close(fd));
 
     // one(fd);

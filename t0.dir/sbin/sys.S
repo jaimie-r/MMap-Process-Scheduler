@@ -114,10 +114,14 @@ seek:
 	ret
 
 	# void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset);
+	.global mmap
 mmap:
 	mov $14, %eax
 	int $48
 	ret
+	
+	# int munmap(void *addr, size_t length);
+	.global munmap
 munmap:
 	mov $15, %eax
 	int $48
