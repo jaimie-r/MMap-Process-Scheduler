@@ -20,6 +20,7 @@ class Process {
     Shared<File> files[NFILE]{};
 	Shared<Semaphore> sems[NSEM]{};
 	Shared<Future<uint32_t>> children[NCHILD]{};
+    Shared<Atomic<bool>> kill_flags[NCHILD]{};
 	BlockingLock mutex{};
 
 	int getChildIndex(int id);
@@ -30,6 +31,7 @@ class Process {
 
 public:
     Shared<Future<uint32_t>> output = Shared<Future<uint32_t>>::make();// { new Future<uint32_t>() };
+    Shared<Atomic<bool>> kill_flag = Shared<Atomic<bool>>::make(false);
     uint32_t *pd = gheith::make_pd();
     VMEntry* entry_list;
 
@@ -70,6 +72,8 @@ public:
 		output->set(v);
 	}
 	int wait(int id, uint32_t* ptr);
+
+    int kill(int id);
 
 	static void init(void);
 

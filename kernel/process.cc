@@ -124,6 +124,7 @@ Shared<Process> Process::fork(int& id) {
         }
 
 	children[index] = child->output;
+	kill_flags[index] = child->kill_flag;
 	id = PROC | index;
 	return child;
 }
@@ -196,5 +197,15 @@ int Process::wait(int id, uint32_t* ptr) {
 	if (e == nullptr) return -1;
 	*ptr = e->get();
 	children[index] = nullptr;
+	return 0;
+}
+
+int Process::kill(int id) {
+	auto index = getChildIndex(id);
+	if (index < 0) return index;
+	auto kill_flag = kill_flags[index];
+	if (kill_flag == nullptr) return -1;
+	kill_flag->set(true);
+	kill_flags[index] = nullptr;
 	return 0;
 }
