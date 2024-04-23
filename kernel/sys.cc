@@ -98,7 +98,6 @@ int SYS::exec(const char* path,
     argv_ptr[argc] = 0;
 
     file = nullptr;
-
     switchToUser(e,sp,0);
     Debug::panic("*** implement switchToUser");
     return -1;

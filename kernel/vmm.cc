@@ -219,6 +219,7 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
     } else {
         prev->next = new_entry;
     }
+    Debug::printf("%lx\n", va);
     return (uint32_t*) va;
 }
 

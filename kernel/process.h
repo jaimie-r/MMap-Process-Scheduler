@@ -33,7 +33,7 @@ public:
     Shared<Future<uint32_t>> output = Shared<Future<uint32_t>>::make();// { new Future<uint32_t>() };
     Shared<Atomic<bool>> kill_flag = Shared<Atomic<bool>>::make(false);
     uint32_t *pd = gheith::make_pd();
-    VMEntry* entry_list;
+    VMEntry* entry_list = nullptr;
 
     static Shared<Process> kernelProcess;
 
