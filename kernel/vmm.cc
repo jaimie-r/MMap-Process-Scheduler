@@ -15,18 +15,6 @@ namespace gheith {
 
     using namespace PhysMem;
 
-    struct NodeEntry {
-        NodeEntry(Shared<Node> file, uint32_t pa) : file(file), pa(pa) {
-            num_processes = 1;
-            next = nullptr;
-        }
-
-        Shared<Node> file;
-        uint32_t num_processes;
-        uint32_t pa;
-        NodeEntry* next;
-    };
-
     uint32_t* shared = nullptr;
     NodeEntry* node_list = nullptr;
 
@@ -54,7 +42,7 @@ namespace gheith {
         pt[pti] = pa | 7;
     }
 
-    void unmap(uint32_t* pd, uint32_t va) {
+    void unmap(uint32_t* pd, uint32_t va, bool physical) {
         auto pdi = va >> 22;
         auto pti = (va >> 12) & 0x3FF;
         auto pde = pd[pdi];
@@ -64,7 +52,9 @@ namespace gheith {
         if ((pte & 1) == 0) return;
         auto pa = pte & 0xFFFFF000;
         pt[pti] = 0;
-        dealloc_frame(pa);
+        if (physical) {
+            dealloc_frame(pa);
+        }
         invlpg(va);
     }
 
@@ -192,7 +182,7 @@ int munmap(void *addr, size_t len) {
     if (address < 0x80000000 || address == kConfig.ioAPIC || address == kConfig.localAPIC) return -1;
 
     // round len up to page size divisible number
-    uint32_t length = PhysMem::frameup(address);
+    uint32_t length = PhysMem::frameup(len);
 
     auto me = current();
     // remove from entry list
@@ -200,13 +190,24 @@ int munmap(void *addr, size_t len) {
     VMEntry* temp = me->process->entry_list;
     while (temp != nullptr) {
         if (address >= temp->starting_address && address < temp->starting_address + temp->size) {
-            if (prev == nullptr) {
-                me->process->entry_list = temp->next;
+            bool physical = true;
+            if (length == temp->size) {
+                // unmapping the whole thing
+                if (prev == nullptr) {
+                    me->process->entry_list = temp->next;
+                } else {
+                    prev->next = temp->next;
+                }
+                if (--temp->node->num_processes != 0) {
+                    physical = false;
+                }
             } else {
-                prev->next = temp->next;
+                if (temp->node->num_processes != 1) {
+                    physical = false;
+                }
             }
             for (uint32_t va = temp->starting_address; va < temp->starting_address + length; va += PhysMem::FRAME_SIZE) {
-                unmap(me->process->pd, va);
+                unmap(me->process->pd, va, physical);
             }
             delete temp;
             return 0;
@@ -318,6 +319,7 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                     }
                     if (temp2 != nullptr) {
                         // node is physmem
+                        temp->node = temp2;
                         pa = temp2->pa;
                         temp2->num_processes++;
                     } else {
@@ -345,6 +347,7 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                                 ((char*) pa)[i] = 0;
                             }
                         }
+                        temp->node = new_entry;
                     }
                 }
                 user_map(me->process->pd, va, pa);

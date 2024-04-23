@@ -13,7 +13,10 @@ int main(int argc, char** argv) {
 
     char * contents = (char *)mmap(0, 20, 0, 0, fd, 0);
     printf("*** 1\n");
-    printf("%s", contents);
+    printf("%s\n", contents);
+
+    munmap(contents, 20);
+    printf("%s\n", contents);
 
     shutdown();
     return 0;
