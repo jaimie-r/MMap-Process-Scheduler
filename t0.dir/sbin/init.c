@@ -9,24 +9,16 @@ void one(int fd) {
 
 int main(int argc, char** argv) {
     
-    // int fd = open("/etc/data.txt",0);
+    int fd = open("/etc/data.txt", 0);
+    char* contents = (char*) mmap(0, 20, 0, 0, fd, 0);
+    printf("*** 1\n");
+    printf("%s\n", contents);
+    printf("%lx\n", (uint32_t) contents);
 
-    // char * contents = (char *)mmap(0, 20, 0, 0, fd, 0);
-    // printf("*** 1\n");
-    // printf("%s\n", contents);
+    munmap(contents, 20);
 
-    // munmap(contents, 20);
-    // printf("%s\n", contents);
-
-    int id = fork();
-    if (id == 0) {
-        printf("i'm the child\n");
-    } else {
-        //kill(id);
-        wait(id, 0);
-        printf("hi again\n");
-        printf("i'm the parent\n");
-    }
+    char* new_contents = (char*) mmap(0, 20, 0, 0, fd, 0);
+    printf("%lx\n", (uint32_t) new_contents);
 
     shutdown();
     return 0;
