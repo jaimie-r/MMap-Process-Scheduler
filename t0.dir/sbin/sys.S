@@ -126,3 +126,9 @@ munmap:
 	mov $15, %eax
 	int $48
 	ret
+
+	.global kill
+kill:
+	mov $16, %eax
+	int $48
+	ret

@@ -82,4 +82,6 @@ extern void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t
 
 extern int munmap (void *addr, size_t len);
 
+extern int kill (int id);
+
 #endif

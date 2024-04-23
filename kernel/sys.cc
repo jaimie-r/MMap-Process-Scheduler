@@ -281,6 +281,11 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
             size_t length = (size_t)userEsp[2];
             return VMM::munmap(addr, length);
         }
+    case 16: /* kill */
+        {
+            int id = (int)userEsp[1];
+            return current()->process->kill(id);
+        }
     default:
         {
             Debug::printf("*** 1000000000 unknown system call %d\n",eax);
