@@ -37,13 +37,14 @@ struct NodeEntry {
     };
 
     struct VMEntry {
-        VMEntry(Shared<Node> file, uint32_t size, uint32_t starting_address, uint32_t offset, VMEntry* next) :
-                file(file), size(size), starting_address(starting_address), offset(offset), next(next) {};
+        VMEntry(Shared<Node> file, uint32_t size, uint32_t starting_address, uint32_t offset, VMEntry* next, uint32_t flags) :
+                file(file), size(size), starting_address(starting_address), offset(offset), next(next), flags(flags) {};
 
         Shared<Node> file;
         uint32_t size;
         uint32_t starting_address;
         uint32_t offset;
+        uint32_t flags;
         VMEntry* next;
         NodeEntry* node;
     };

@@ -15,6 +15,21 @@ int main(int argc, char** argv) {
     printf("%s\n", contents);
     printf("%lx\n", (uint32_t) contents);
 
+    int child = fork();
+    if(child == 0) {
+        // child
+        printf("child\n");
+        munmap(contents, 20);
+        contents = (char*) mmap(0, 20, 0, 0, fd, 0);
+        printf("%s\n", contents);
+        printf("%lx\n", (uint32_t) contents);
+        contents[0] = 'X';
+        exit(0);
+    }
+    uint32_t status = 42;
+    wait(child, &status);
+    printf("%c\n", contents[0]);
+
     printf("before unmap\n");
     munmap(contents, 20);
 

@@ -112,6 +112,31 @@ Shared<Process> Process::fork(int& id) {
 		}
 	}
 
+	// deep copy entry list
+	if (entry_list == nullptr) {
+		child->entry_list = nullptr;
+	} else {
+		child->entry_list = new VMEntry(entry_list->file, entry_list->size, entry_list->starting_address, entry_list->offset, nullptr);
+		child->entry_list->node = entry_list->node;
+		VMEntry* temp = entry_list;
+		VMEntry* temp2 = child->entry_list;
+		while (temp != nullptr) {
+			temp2->next = new VMEntry(temp->file, temp->size, temp->starting_address, temp->offset, nullptr);
+			temp2->next->node = temp->node;
+			temp = temp->next;
+			temp2 = temp2->next;
+		}
+	}
+
+	// increment num processed on node list
+	VMEntry* temp = child->entry_list;
+	while (temp != nullptr) {
+		if (temp->node != nullptr) {
+			temp->node->num_processes++;
+		}
+		temp = temp->next;
+	}
+
 	//child->addressSpace->copyFrom(addressSpace);
 	for (auto i = 0; i<NSEM; i++) {
 		auto s = sems[i];
