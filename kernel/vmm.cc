@@ -179,10 +179,13 @@ int munmap(void *addr, size_t len) {
                     physical = false;
                 }
             }
+            if((temp->flags & 0x1) == 0) {
+                physical = true;
+            }
             for (uint32_t va = temp->starting_address; va < temp->starting_address + length; va += PhysMem::FRAME_SIZE) {
                 unmap(me->process->pd, va, physical);
             }
-            if (physical) {
+            if (physical && (temp->flags & 0x1) != 0) {
                 // remove from node list
                 NodeEntry *p = node_list; // prev
                 NodeEntry *t = p->next; // temp
@@ -236,11 +239,15 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
             temp = temp->next;
         }
     }
+    if(va != (uint32_t)addr && (flags & 2) == 2) {
+        // map fixed
+        return nullptr;
+    }
     Shared<Node> file = (Shared<Node>)nullptr;
     if(fd >= 0) {
         file = me->process->getFile(fd)->getNode();
     } 
-    VMEntry* new_entry = new VMEntry(file, size, va, offset, temp);
+    VMEntry* new_entry = new VMEntry(file, size, va, offset, temp, flags, prot);
     if (prev == nullptr) {
         me->process->entry_list = new_entry;
     } else {
@@ -267,7 +274,8 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
             if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
                 uint32_t pa;
                 // check if the vmentry is map anonymous (meaning file is null)
-                if(temp->file == nullptr) {
+                // also checks for map private
+                if(temp->file == nullptr || (temp->flags & 0x1) == 0) {
                     // is map anonymous
                     // not in physmem yet so allocate
                     pa = PhysMem::alloc_frame();

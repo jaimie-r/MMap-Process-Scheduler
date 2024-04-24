@@ -116,12 +116,12 @@ Shared<Process> Process::fork(int& id) {
 	if (entry_list == nullptr) {
 		child->entry_list = nullptr;
 	} else {
-		child->entry_list = new VMEntry(entry_list->file, entry_list->size, entry_list->starting_address, entry_list->offset, nullptr);
+		child->entry_list = new VMEntry(entry_list->file, entry_list->size, entry_list->starting_address, entry_list->offset, nullptr, entry_list->flags, entry_list->prot);
 		child->entry_list->node = entry_list->node;
 		VMEntry* temp = entry_list;
 		VMEntry* temp2 = child->entry_list;
 		while (temp != nullptr) {
-			temp2->next = new VMEntry(temp->file, temp->size, temp->starting_address, temp->offset, nullptr);
+			temp2->next = new VMEntry(temp->file, temp->size, temp->starting_address, temp->offset, nullptr, temp->flags, temp->prot);
 			temp2->next->node = temp->node;
 			temp = temp->next;
 			temp2 = temp2->next;
