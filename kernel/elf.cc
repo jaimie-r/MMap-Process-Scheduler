@@ -24,7 +24,7 @@ uint32_t ELF::load(Shared<Node> file) {
 
             Debug::printf("vaddr:%x memsz:0x%x filesz:0x%x fileoff:%x\n",
                 p,memsz,filesz,phdr.offset);
-            VMM::mmap(p, memsz, 0, 0, -1, phdr.offset);
+            VMM::mmap(p, memsz, 0xa, 0x1, -1, phdr.offset);
             file->read_all(phdr.offset,filesz,p);
             bzero(p + filesz, memsz - filesz);
         }

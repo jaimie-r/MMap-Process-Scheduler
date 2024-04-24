@@ -69,7 +69,7 @@ int SYS::exec(const char* path,
     uint32_t e = ELF::load(file);
 
     // mmap stack
-    VMM::mmap((uint32_t *)(sp - 4000000), 4000000, 0,0, -1, 0);
+    VMM::mmap((uint32_t *)(sp - 4000000), 4000000, 0xa ,0x1, -1, 0);
 
     uint32_t total_bytes = 12 + (4 * argc);
     uint32_t* lengths = new uint32_t[argc];
@@ -128,16 +128,6 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
             }
             size_t nbyte = (size_t) userEsp[3];
             auto file = current()->process->getFile(fd);
-            // VMEntry *temp = current()->process->entry_list;
-            // while(temp != nullptr) {
-            //     if(temp->file->number == file->getNode()->number) {
-            //         if(((temp->prot & 4) >> 2) != 1 || (temp->prot & 0x1) == 1) {
-            //             //checking protections
-            //             return -1;
-            //         }
-            //     }
-            //     temp = temp->next;
-            // }
             if (file == nullptr) return -1;
             return file->write(buf,nbyte);
         }
@@ -256,16 +246,6 @@ extern "C" int sysHandler(uint32_t eax, uint32_t *frame) {
             }
             size_t nbyte = (size_t) userEsp[3];
             Shared<File> file = current()->process->getFile(fd);
-            // VMEntry *temp = current()->process->entry_list;
-            // while(temp != nullptr) {
-            //     if(temp->file->number == file->getNode()->number && ((temp->prot & 2) >> 1) != 1) {
-            //         if(((temp->prot & 2) >> 1) != 1 || (temp->prot & 0x1) == 1) {
-            //             //checking protections
-            //             return -1;
-            //         }
-            //     }
-            //     temp = temp->next;
-            // }
             if (file == nullptr) {
                 return -1;
             }

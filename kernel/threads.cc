@@ -8,6 +8,7 @@
 #include "threads.h"
 #include "vmm.h"
 #include "process.h"
+#include "priority_queue.h"
 
 
 
@@ -17,7 +18,7 @@ namespace gheith {
     TCB** activeThreads;
     TCB** idleThreads;
 
-    Queue<TCB,InterruptSafeLock> readyQ{};
+    PriorityQueue<TCB,InterruptSafeLock> readyQ{};
     Queue<TCB,InterruptSafeLock> zombies{};
 
     TCB* current() {

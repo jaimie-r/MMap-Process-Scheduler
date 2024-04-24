@@ -32,6 +32,7 @@ class Process {
 public:
     Shared<Future<uint32_t>> output = Shared<Future<uint32_t>>::make();// { new Future<uint32_t>() };
     Shared<Atomic<bool>> kill_flag = Shared<Atomic<bool>>::make(false);
+    Shared<Atomic<int>> run_time = Shared<Atomic<int>>::make(0);
     uint32_t *pd = gheith::make_pd();
     VMEntry* entry_list = nullptr;
 

@@ -145,6 +145,7 @@ extern "C" void apitHandler(uint32_t* things) {
     SMP::eoi_reg.set(0);
     auto me = gheith::activeThreads[id];
     if ((me == nullptr) || (me->isIdle) || (me->saveArea.no_preempt)) return;
+    me->process->run_time->add_fetch(1);
     if (me->process->kill_flag->get()) {
         me->process->exit(1);
         stop();

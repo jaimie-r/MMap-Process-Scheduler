@@ -9,6 +9,7 @@
 #include "ext2.h"
 #include "physmem.h"
 #include "process.h"
+#include "priority_queue.h"
 
 
 namespace gheith {
@@ -239,10 +240,10 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
             temp = temp->next;
         }
     }
-    // if(va != (uint32_t)addr && (flags & 2) == 2) {
-    //     // map fixed
-    //     return nullptr;
-    // }
+    if(va != (uint32_t)addr && (flags & 2) == 2) {
+        // map fixed
+        return nullptr;
+    }
     Shared<Node> file = (Shared<Node>)nullptr;
     if(fd >= 0) {
         file = me->process->getFile(fd)->getNode();
@@ -275,7 +276,7 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                 uint32_t pa;
                 // check if the vmentry is map anonymous (meaning file is null)
                 // also checks for map private
-                if(temp->file == nullptr) {
+                if(temp->file == nullptr || (temp->flags & 0x1) == 0) {
                     // is map anonymous
                     // not in physmem yet so allocate
                     pa = PhysMem::alloc_frame();

@@ -9,6 +9,7 @@
 #include "shared.h"
 #include "vmm.h"
 #include "tss.h"
+#include "priority_queue.h"
 
 class Process;
 
@@ -58,7 +59,7 @@ namespace gheith {
     extern TCB** idleThreads;
 
     extern TCB* current();
-    extern Queue<TCB,InterruptSafeLock> readyQ;
+    extern PriorityQueue<TCB,InterruptSafeLock> readyQ;
     extern void entry();
     extern void schedule(TCB*);
     extern void delete_zombies();

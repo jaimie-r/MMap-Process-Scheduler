@@ -10,7 +10,7 @@ void one(int fd) {
 int main(int argc, char** argv) {
     
     int fd = open("/etc/data.txt", 0);
-    char* contents = (char*) mmap(0, 20, 0, 0, fd, 0);
+    char* contents = (char*) mmap(0, 20, 0x6, 0x1, fd, 0);
     printf("*** 1\n");
     printf("%s\n", contents);
     printf("%lx\n", (uint32_t) contents);
@@ -20,7 +20,7 @@ int main(int argc, char** argv) {
         // child
         printf("child\n");
         munmap(contents, 20);
-        contents = (char*) mmap(0, 20, 0, 0, fd, 0);
+        contents = (char*) mmap(0, 20, 0x6, 0x1, fd, 0);
         printf("%s\n", contents);
         printf("%lx\n", (uint32_t) contents);
         contents[0] = 'X';
@@ -33,17 +33,27 @@ int main(int argc, char** argv) {
     printf("before unmap\n");
     munmap(contents, 20);
 
-    char* new_contents = (char*) mmap(0, 20, 0, 0, fd, 0);
+    char* new_contents = (char*) mmap(0, 20, 0x6, 0x1, fd, 0);
     printf("*** 2\n");
     printf("%s\n", new_contents);
     printf("%lx\n", (uint32_t) new_contents);
 
     int fd2 = open("/data/panic.txt", 0);
     printf("*** hello\n");
-    char* c3 = (char*) mmap(0, 20, 0, 0, fd2, 0);
+    char* c3 = (char*) mmap(0, 20, 0x6, 0x1, fd2, 0);
     printf("*** 3\n");
     printf("%s\n", c3);
     printf("%lx\n", (uint32_t) c3);
+
+    // printf("parent\n");
+
+    // int id = fork();
+    // if (id == 0) {
+    //     printf("child\n");
+    //     exit(0);
+    // } else {
+    //     printf("parent\n");
+    // }
 
     shutdown();
     return 0;
