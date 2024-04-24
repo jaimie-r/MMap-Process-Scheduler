@@ -9,19 +9,19 @@ void one(int fd) {
 
 int main(int argc, char** argv) {
     
-    // int fd = open("/etc/data.txt", 0);
-    // char* contents = (char*) mmap(0, 20, 0, 0, fd, 0);
-    // printf("*** 1\n");
-    // printf("%s\n", contents);
-    // printf("%lx\n", (uint32_t) contents);
+    int fd = open("/etc/data.txt", 0);
+    char* contents = (char*) mmap(0, 20, 0, 0, fd, 0);
+    printf("*** 1\n");
+    printf("%s\n", contents);
+    printf("%lx\n", (uint32_t) contents);
 
-    // char* new_contents = (char*) mmap(0, 20, 0, 0, fd, 0);
-    // printf("*** 2\n");
-    // printf("%s\n", new_contents);
-    // printf("%lx\n", (uint32_t) new_contents);
+    printf("before unmap\n");
+    munmap(contents, 20);
 
-    // contents[0] = 'h';
-    // printf("*** %c\n", new_contents[0]);
+    char* new_contents = (char*) mmap(0, 20, 0, 0, fd, 0);
+    printf("*** 2\n");
+    printf("%s\n", new_contents);
+    printf("%lx\n", (uint32_t) new_contents);
 
     int fd2 = open("/data/panic.txt", 0);
     printf("*** hello\n");

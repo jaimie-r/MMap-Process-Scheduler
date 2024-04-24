@@ -154,13 +154,11 @@ void per_core_init() {
 int munmap(void *addr, size_t len) {
     using namespace gheith;
     uint32_t address = (uint32_t) addr;
-    if (address < 0x80000000 || address == kConfig.ioAPIC || address == kConfig.localAPIC) return -1;
+    if (address < 0x80000000 || address > kConfig.ioAPIC) return -1;
 
-    // round len up to page size divisible number
     uint32_t length = PhysMem::frameup(len);
 
     auto me = current();
-    // remove from entry list
     VMEntry* prev = nullptr;
     VMEntry* temp = me->process->entry_list;
     while (temp != nullptr) {
@@ -184,6 +182,23 @@ int munmap(void *addr, size_t len) {
             for (uint32_t va = temp->starting_address; va < temp->starting_address + length; va += PhysMem::FRAME_SIZE) {
                 unmap(me->process->pd, va, physical);
             }
+            if (physical) {
+                // remove from node list
+                NodeEntry *p = node_list; // prev
+                NodeEntry *t = p->next; // temp
+                if(p->file->number == temp->node->file->number) {
+                    node_list = node_list->next;
+                } else {
+                    while(t != nullptr) {
+                        if(t->file->number == temp->node->file->number) {
+                            p->next = t->next;
+                            break;
+                        }
+                        p = t;
+                        t = t->next;
+                    }
+                }
+            }
             delete temp;
             return 0;
         }
@@ -195,19 +210,31 @@ int munmap(void *addr, size_t len) {
 
 void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
     using namespace gheith;
+    uint32_t ending_addr = (uint32_t)addr + length;
+    if ((ending_addr < 0x80000000 && (uint32_t)addr != 0) || (uint32_t)addr > kConfig.ioAPIC || ending_addr > kConfig.ioAPIC) return nullptr;
     auto me = current();
-    uint32_t final_va = addr == 0 ? 0x80000000 : (uint32_t) addr;
-    uint32_t va = 0x80000000;
+    uint32_t va = addr == 0 ? 0x80000000 : (uint32_t) addr;
     uint32_t size = PhysMem::frameup(length);
-    VMEntry* prev = nullptr;
-    VMEntry* temp = me->process->entry_list;
-    while (temp != nullptr) {
-        if (va + size <= temp->starting_address && va >= final_va) {
-            break;
+    VMEntry* prev = me->process->entry_list;
+    VMEntry* temp = nullptr;
+    if(prev != nullptr) {
+        temp = prev->next;
+        while(temp != nullptr) {
+            if (va > temp->starting_address) {
+                prev = temp;
+                temp = temp->next;
+                continue;
+            }
+            if (va >= prev->starting_address + prev->size && va + size < temp->starting_address) {
+                break;
+            }
+            va = prev->starting_address + prev->size;
+            if (va >= prev->starting_address + prev->size && va + size < temp->starting_address) {
+                break;
+            }
+            prev = temp;
+            temp = temp->next;
         }
-        va = temp->starting_address + temp->size;
-        prev = temp;
-        temp = temp->next;
     }
     Shared<Node> file = (Shared<Node>)nullptr;
     if(fd >= 0) {
@@ -219,7 +246,6 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
     } else {
         prev->next = new_entry;
     }
-    Debug::printf("%lx\n", va);
     return (uint32_t*) va;
 }
 
@@ -234,10 +260,6 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     uint32_t va = PhysMem::framedown(va_);
     auto temp = me->process->entry_list;
 
-    // if (va >= 0x80000000 && temp == nullptr) {
-    //     auto pa = PhysMem::alloc_frame();
-    //     user_map(me->process->pd, va, pa);
-    //     return;
     if (va >= 0x80000000) {
         // looping through entry list
         while (temp != nullptr) {
@@ -249,9 +271,7 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                     // is map anonymous
                     // not in physmem yet so allocate
                     pa = PhysMem::alloc_frame();
-                    for (uint32_t i = 0; i < PhysMem::FRAME_SIZE; i++) {
-                        ((char*) pa)[i] = 0;
-                    }
+                    
                 } else {
                     // look for in node list
                     NodeEntry* prev = nullptr;

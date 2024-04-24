@@ -69,7 +69,7 @@ int SYS::exec(const char* path,
     uint32_t e = ELF::load(file);
 
     // mmap stack
-    sp = (uint32_t)VMM::mmap((uint32_t *)sp, 4000000, 0,0, -1, 0);
+    VMM::mmap((uint32_t *)(sp - 4000000), 4000000, 0,0, -1, 0);
 
     uint32_t total_bytes = 12 + (4 * argc);
     uint32_t* lengths = new uint32_t[argc];
@@ -82,7 +82,9 @@ int SYS::exec(const char* path,
 
     sp -= total_bytes;
 
+
     ((uint32_t*) sp)[0] = argc;
+
 
     char** argv_ptr = (char**) (sp + 8);
     ((uint32_t*) sp)[1] = (uint32_t) argv_ptr;
