@@ -44,9 +44,9 @@ struct NodeEntry {
         uint32_t size;
         uint32_t starting_address;
         uint32_t offset;
+        VMEntry* next;
         uint32_t flags;
         uint32_t prot;
-        VMEntry* next;
         NodeEntry* node;
     };
 
