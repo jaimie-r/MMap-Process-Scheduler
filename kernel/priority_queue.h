@@ -25,21 +25,21 @@ public:
         LockGuard g{lock};
 
         if (first == nullptr || t->process->run_time->get() < first->process->run_time->get()) {
-        t->next = first;
-        first = t;
-        size++;
-        return;
-    }
+            t->next = first;
+            first = t;
+            size++;
+            return;
+        }
 
-    T* prev = nullptr;
-    T* temp = first;
-    while (temp != nullptr && temp->process->run_time->get() <= t->process->run_time->get()) {
-        prev = temp;
-        temp = temp->next;
-    }
+        T* prev = nullptr;
+        T* temp = first;
+        while (temp != nullptr && temp->process->run_time->get() <= t->process->run_time->get()) {
+            prev = temp;
+            temp = temp->next;
+        }
 
-    prev->next = t;
-    t->next = temp;
+        prev->next = t;
+        t->next = temp;
     }
 
     T* remove() {

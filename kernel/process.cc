@@ -118,7 +118,7 @@ Shared<Process> Process::fork(int& id) {
 	} else {
 		child->entry_list = new VMEntry(entry_list->file, entry_list->size, entry_list->starting_address, entry_list->offset, nullptr, entry_list->flags, entry_list->prot);
 		child->entry_list->node = entry_list->node;
-		VMEntry* temp = entry_list;
+		VMEntry* temp = entry_list->next;
 		VMEntry* temp2 = child->entry_list;
 		while (temp != nullptr) {
 			temp2->next = new VMEntry(temp->file, temp->size, temp->starting_address, temp->offset, nullptr, temp->flags, temp->prot);
@@ -233,4 +233,14 @@ int Process::kill(int id) {
 	kill_flag->set(true);
 	kill_flags[index] = nullptr;
 	return 0;
+}
+
+void Process::decrementFiles() {
+	VMEntry* temp = entry_list;
+	while (temp != nullptr) {
+		if (temp->node != nullptr) {
+			temp->node->num_processes--;
+		}
+		temp = temp->next;
+	}
 }

@@ -155,76 +155,82 @@ void per_core_init() {
 int munmap(void *addr, size_t len) {
     using namespace gheith;
     uint32_t address = (uint32_t) addr;
-    if (address < 0x80000000 || address > kConfig.ioAPIC) return -1;
-
-    uint32_t length = PhysMem::frameup(len);
+    if (is_special(address)) return -1;
 
     auto me = current();
     VMEntry* prev = nullptr;
-    VMEntry* temp = me->process->entry_list;
-    while (temp != nullptr) {
-        if (address >= temp->starting_address && address < temp->starting_address + temp->size) {
+    VMEntry* vm_entry = me->process->entry_list;
+
+    // Iterate through entry list for entry associated with address.
+    while (vm_entry != nullptr) {
+
+        // Found the corresponding entry.
+        if (address >= vm_entry->starting_address && address < vm_entry->starting_address + vm_entry->size) {
             bool physical = true;
-            if (length == temp->size) {
-                // unmapping the whole thing
-                if (prev == nullptr) {
-                    me->process->entry_list = temp->next;
-                } else {
-                    prev->next = temp->next;
-                }
-                if (--temp->node->num_processes != 0) {
-                    physical = false;
-                }
+
+            // Remove the entry from the process's entry list.
+            if (prev == nullptr) {
+                me->process->entry_list = vm_entry->next;
             } else {
-                if (temp->node->num_processes != 1) {
-                    physical = false;
-                }
+                prev->next = vm_entry->next;
             }
-            // if((temp->flags & 0x1) == 0) {
-            //     physical = true;
-            // }
-            for (uint32_t va = temp->starting_address; va < temp->starting_address + length; va += PhysMem::FRAME_SIZE) {
+
+            // If a private mapping, it needs to be deallocated from physical memory.
+            if ((vm_entry->flags & 0x1) == 0) {
+                physical = true;
+            } else if (--vm_entry->node->num_processes != 0) {
+                // Only deallocate from physical memory if this is the last process mapped to the file.
+                physical = false;
+            }
+
+            // Unmap from virtual memory.
+            for (uint32_t va = vm_entry->starting_address; va < vm_entry->starting_address + vm_entry->size; va += PhysMem::FRAME_SIZE) {
                 unmap(me->process->pd, va, physical);
             }
+
             if (physical) {
-                // remove from node list
-                NodeEntry *p = node_list; // prev
-                NodeEntry *t = p->next; // temp
-                if(p->file->number == temp->node->file->number) {
+                NodeEntry *node_entry = node_list;
+                NodeEntry *next_entry = node_entry->next;
+                if (node_entry->file->number == vm_entry->node->file->number) {
                     node_list = node_list->next;
                 } else {
-                    while(t != nullptr) {
-                        if(t->file->number == temp->node->file->number) {
-                            p->next = t->next;
+                    while (next_entry != nullptr) {
+                        if (next_entry->file->number == vm_entry->node->file->number) {
+                            node_entry->next = next_entry->next;
                             break;
                         }
-                        p = t;
-                        t = t->next;
+                        node_entry = next_entry;
+                        next_entry = next_entry->next;
                     }
                 }
             }
-            delete temp;
+            delete vm_entry;
             return 0;
         }
-        prev = temp;
-        temp = temp->next;
+        prev = vm_entry;
+        vm_entry = vm_entry->next;
     }
     return 0;
 }
 
 void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset) {
     using namespace gheith;
-    uint32_t ending_addr = (uint32_t)addr + length;
-    if ((ending_addr < 0x80000000 && (uint32_t)addr != 0) || (uint32_t)addr > kConfig.ioAPIC || ending_addr > kConfig.ioAPIC) return nullptr;
-    auto me = current();
+
+    // If address is not specified, default to first-fitting address.
     uint32_t va = addr == 0 ? 0x80000000 : (uint32_t) addr;
+    if (is_special(va)) return nullptr;
+    auto me = current();
+    
     uint32_t size = PhysMem::frameup(length);
     VMEntry* prev = me->process->entry_list;
     VMEntry* temp = nullptr;
-    if(prev != nullptr) {
+
+    // Iterate through entry list. Find best-fitting address.
+    if (prev != nullptr) {
         temp = prev->next;
-        while(temp != nullptr) {
-            if (va > temp->starting_address) {
+        while (temp != nullptr) {
+            // Iterate through entries until past user-specified address.
+            if (va >= temp->starting_address) {
                 prev = temp;
                 temp = temp->next;
                 continue;
@@ -240,14 +246,17 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
             temp = temp->next;
         }
     }
-    if(va != (uint32_t)addr && (flags & 2) == 2) {
-        // map fixed
+    // MAP_FIXED: Return nullptr if specified address is undesignated.
+    if (va != (uint32_t) addr && (flags & 2) == 2) {
         return nullptr;
     }
-    Shared<Node> file = (Shared<Node>)nullptr;
-    if(fd >= 0) {
+
+    // Create file and add to entry list.
+    Shared<Node> file = (Shared<Node>) nullptr;
+    if (fd >= 0) {
         file = me->process->getFile(fd)->getNode();
     } 
+
     VMEntry* new_entry = new VMEntry(file, size, va, offset, temp, flags, prot);
     if (prev == nullptr) {
         me->process->entry_list = new_entry;
@@ -257,7 +266,7 @@ void *mmap (void *addr, size_t length, int prot, int flags, int fd, off_t offset
     return (uint32_t*) va;
 }
 
-} /* namespace vmm */
+}
 
 extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     using namespace gheith;
@@ -266,54 +275,50 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
     ASSERT(me->saveArea.cr3 == getCR3());
 
     uint32_t va = PhysMem::framedown(va_);
-    auto temp = me->process->entry_list;
+    auto vm_entry = me->process->entry_list;
 
+    // Iterate through entry list to find mapped file.
     if (va >= 0x80000000) {
-        // looping through entry list
-        while (temp != nullptr) {
-            // finding correct vmentry
-            if (va >= temp->starting_address && va < temp->starting_address + temp->size) {
+
+        while (vm_entry != nullptr) {
+
+            // Found the entry that the virtual address corresponds to.
+            if (va >= vm_entry->starting_address && va < vm_entry->starting_address + vm_entry->size) {
+
                 uint32_t pa;
-                // check if the vmentry is map anonymous (meaning file is null)
-                // also checks for map private
-                if(temp->file == nullptr || (temp->flags & 0x1) == 0) {
-                    // is map anonymous
-                    // not in physmem yet so allocate
+
+                // If an anonymous or private mapping, allocate a new physical frame. If file has not
+                // been mapped yet, allocate a new physical frame.
+                if (vm_entry->file == nullptr || (vm_entry->flags & 0x1) == 0) {
                     pa = PhysMem::alloc_frame();
-                    
                 } else {
-                    // look for in node list
+                    // Process shares mapping with other processes. See if it has been mapped already.
                     NodeEntry* prev = nullptr;
-                    NodeEntry* temp2 = node_list;
-                    if (temp2 != nullptr) {
-                        while (temp2 != nullptr) {
-                            // found entry in node list (meaning it exists in physmem alr)
-                            if (temp->file->number == temp2->file->number) {
+                    NodeEntry* node_entry = node_list;
+                    if (node_entry != nullptr) {
+                        while (node_entry != nullptr) {
+                            if (vm_entry->file->number == node_entry->file->number) {
                                 break;
                             }
-                            prev = temp2;
-                            temp2 = temp2->next;
+                            prev = node_entry;
+                            node_entry = node_entry->next;
                         }
                     }
-                    if (temp2 != nullptr) {
-                        // node is physmem
-                        temp->node = temp2;
-                        pa = temp2->pa;
-                        temp2->num_processes++;
+                    if (node_entry != nullptr) {
+                        vm_entry->node = node_entry;
+                        pa = node_entry->pa;
+                        node_entry->num_processes++;
                     } else {
-                        // not in physmem yet so allocate
+                        // File has not been mapped yet. We will read it in.
                         pa = PhysMem::alloc_frame();
-                        // add to node list
-                        NodeEntry* new_entry = new NodeEntry(temp->file, pa);
+                        NodeEntry* new_entry = new NodeEntry(vm_entry->file, pa);
                         if (prev == nullptr) {
                             node_list = new_entry;
                         } else {
                             prev->next = new_entry;
                         }
-                        // reading in file
-                        if (temp->file != nullptr) {
-                            auto read = temp->file->read_all(temp->offset + va - temp->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
-                            // zero out the rest of the alloced space
+                        if (vm_entry->file != nullptr && (vm_entry->prot & 2) == 2) {
+                            auto read = vm_entry->file->read_all(vm_entry->offset + va - vm_entry->starting_address, PhysMem::FRAME_SIZE, (char*) pa);
                             if (read != PhysMem::FRAME_SIZE) {
                                 if (read == -1) read = 0;
                                 for (int i = 0; i < PhysMem::FRAME_SIZE - read; i++) {
@@ -325,13 +330,13 @@ extern "C" void vmm_pageFault(uintptr_t va_, uintptr_t *saveState) {
                                 ((char*) pa)[i] = 0;
                             }
                         }
-                        temp->node = new_entry;
+                        vm_entry->node = new_entry;
                     }
                 }
                 user_map(me->process->pd, va, pa);
                 return;
             }
-            temp = temp->next;
+            vm_entry = vm_entry->next;
         }
     }
     current()->process->exit(1);

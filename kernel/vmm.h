@@ -25,29 +25,29 @@ namespace VMM {
 }
 
 struct NodeEntry {
-        NodeEntry(Shared<Node> file, uint32_t pa) : file(file), pa(pa) {
-            num_processes = 1;
-            next = nullptr;
-        }
+    NodeEntry(Shared<Node> file, uint32_t pa) : file(file), pa(pa) {
+        num_processes = 1;
+        next = nullptr;
+    }
 
-        Shared<Node> file;
-        uint32_t num_processes;
-        uint32_t pa;
-        NodeEntry* next;
-    };
+    Shared<Node> file;
+    uint32_t num_processes;
+    uint32_t pa;
+    NodeEntry* next;
+};
 
-    struct VMEntry {
-        VMEntry(Shared<Node> file, uint32_t size, uint32_t starting_address, uint32_t offset, VMEntry* next, uint32_t flags, uint32_t prot) :
-                file(file), size(size), starting_address(starting_address), offset(offset), next(next), flags(flags), prot(prot) {};
+struct VMEntry {
+    VMEntry(Shared<Node> file, uint32_t size, uint32_t starting_address, uint32_t offset, VMEntry* next, uint32_t flags, uint32_t prot) :
+            file(file), size(size), starting_address(starting_address), offset(offset), next(next), flags(flags), prot(prot) {};
 
-        Shared<Node> file;
-        uint32_t size;
-        uint32_t starting_address;
-        uint32_t offset;
-        VMEntry* next;
-        uint32_t flags;
-        uint32_t prot;
-        NodeEntry* node;
-    };
+    Shared<Node> file;
+    uint32_t size;
+    uint32_t starting_address;
+    uint32_t offset;
+    VMEntry* next;
+    uint32_t flags;
+    uint32_t prot;
+    NodeEntry* node;
+};
 
 #endif

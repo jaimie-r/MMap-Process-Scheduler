@@ -75,11 +75,12 @@ public:
 	int wait(int id, uint32_t* ptr);
 
     int kill(int id);
+    
+    void decrementFiles();
 
 	static void init(void);
 
     friend class Shared<Process>;
-    //friend class gheith::TCB;
 };
 
 #endif
