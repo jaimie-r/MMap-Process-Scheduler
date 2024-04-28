@@ -1,12 +1,34 @@
-*** 1
+****************************
+*** MMAP AND MUNAP TESTS ***
+****************************
+*** data.txt is now mapped to p.
+*** p is 0x80403000
+*** printing p's contents:
 *** this is nice
 *** we can read and write
+***
+*** we are in the child process.
+*** child processes inheit the parent's mappings. printing p's contents:
 *** this is nice
 *** we can read and write
-*** 2
+***
+*** mapping the same file to p2. flag indicates shared mapping
+*** p2 is 0x80404000
+*** the region at p2 has been edited. now we will print p's contents. even though p and p2 are different
+*** virtual addresses, the changes at address p2 are seen in p region.
+*** xhis is nice
 *** we can read and write
-*** hello
-*** 3
+***
+*** p2 has been unmapped. printing p's contents:
+*** xhis is nice
+*** we can read and write
+*** print successful. p2 did not deallocate physical memory since there is still another process.
+*** all mappings of data.txt have been unmapped.
+***
+*** p3 is 0x90000000
+*** p4 is 0x90001000
+*** fixed mapping ensures address is at specified location or nullptr is returned
+*** p5 is 0x0
 *** Don't panic
 *** 
 *** 
@@ -37,3 +59,5 @@
 ***                                      $$$$$$$$$$"
 ***                                       "$$$""  
 *** 
+*** mapping file without reading permission
+*** printing p6 contents (should print nothing):

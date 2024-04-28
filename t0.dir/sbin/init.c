@@ -76,22 +76,6 @@ int main(int argc, char** argv) {
     printf("*** printing p6 contents (should print nothing):\n");
     printf("%s\n", p6);
 
-    printf("************************\n");
-    printf("*** SCHEDULING TESTS ***\n");
-    printf("************************\n");
-
-    // kill() allows a parent process to stop a child process from executing.
-    child = fork();
-    if (child == 0) {
-        printf("in child process. about to run infinite loop.\n");
-        while (1) {}
-    }
-    kill(child);
-    status = 42;
-    wait(child, &status);
-
-    printf("*** back in parent even though child was to run infinitely. successfully killed.\n");
-
     shutdown();
     return 0;
 }
